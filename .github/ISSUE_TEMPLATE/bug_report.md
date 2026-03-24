@@ -1,17 +1,33 @@
 ---
 name: Bug report
-about: Report a mirror failure or unexpected behavior
+about: Report a problem
+title: ''
 labels: bug
+assignees: ''
 ---
 
-**Describe the bug**
+## Description
 
-**Mirror target:** gitlab / codeberg / both
+<!-- A clear and concise description of the bug -->
 
-**Expected behavior**
+## Steps to Reproduce
 
-**Actual behavior**
+1. Run `...`
+2. ...
 
-**Config** (repos.yaml entry, redact secrets):
+## Expected Behavior
 
-**Logs:**
+<!-- What you expected to happen -->
+
+## Actual Behavior
+
+<!-- What actually happened. Include error traces if applicable -->
+
+## Environment
+
+- OS/Runner:
+- Version:
+
+## Additional Context
+
+<!-- Screenshots, logs, related issues, etc. -->
