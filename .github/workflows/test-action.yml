@@ -1,0 +1,54 @@
+---
+name: Self-test Action
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  self-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup local bare repos
+        id: setup
+        run: |
+          # Reason: create local git repos to test mirror without network
+          SRC_REPO="/tmp/self-test-source"
+          TARGET_REPO="/tmp/self-test-target"
+          mkdir -p "$SRC_REPO" && git init --bare "$SRC_REPO"
+          mkdir -p "$TARGET_REPO" && git init --bare "$TARGET_REPO"
+
+          WORK="/tmp/self-test-work"
+          git clone "$SRC_REPO" "$WORK"
+          git -C "$WORK" config user.name "test"
+          git -C "$WORK" config user.email "test@test"
+          echo "hello" > "$WORK/test.txt"
+          git -C "$WORK" add test.txt
+          git -C "$WORK" commit -m "seed commit"
+          git -C "$WORK" push origin HEAD
+
+          echo "source=$SRC_REPO" >> "$GITHUB_OUTPUT"
+          echo "target=$TARGET_REPO" >> "$GITHUB_OUTPUT"
+
+      - name: Run mirror action
+        uses: ./
+        with:
+          source_repo: ${{ steps.setup.outputs.source }}
+          gitlab_url: ${{ steps.setup.outputs.target }}
+          gitlab_pat: dummy-pat
+
+      - name: Verify target has commit
+        env:
+          TARGET: ${{ steps.setup.outputs.target }}
+        run: |
+          COMMIT_COUNT=$(git -C "$TARGET" rev-list --count --all)
+          echo "Target has $COMMIT_COUNT commits"
+          [ "$COMMIT_COUNT" -ge 1 ]
+          echo "Self-test passed: mirror pushed to target."

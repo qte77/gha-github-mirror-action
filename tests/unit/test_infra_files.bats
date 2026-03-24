@@ -69,6 +69,11 @@ setup() {
   grep -q "bats" "$REPO_ROOT/.github/workflows/test.yml"
 }
 
+@test "self-test workflow exists and uses local action" {
+  [ -f "$REPO_ROOT/.github/workflows/test-action.yml" ]
+  grep -q "uses: ./" "$REPO_ROOT/.github/workflows/test-action.yml"
+}
+
 # --- cleanup script ---
 
 @test "cleanup script exists and is executable" {
