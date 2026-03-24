@@ -1,9 +1,8 @@
-# Sandbox artifacts (Claude Code worktree)
-HEAD
-config
-hooks
-objects
-refs
+# Sandbox artifacts (Claude Code worktree bare git files)
+/HEAD
+/hooks
+/objects
+/refs
 
 # Claude Code
 .claude/

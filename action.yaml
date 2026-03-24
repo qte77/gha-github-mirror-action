@@ -1,0 +1,43 @@
+---
+name: 'GitHub Mirror Action'
+description: 'Mirror GitHub repos to GitLab and/or Codeberg (all branches, tags, refs)'
+author: 'qte77'
+branding:
+  icon: 'copy'
+  color: 'blue'
+inputs:
+  source_repo:
+    description: 'Source repo URL (defaults to current repo)'
+    required: false
+    default: ''
+  gitlab_url:
+    description: 'Target GitLab repo HTTPS URL'
+    required: false
+    default: ''
+  gitlab_pat:
+    description: 'GitLab PAT (write_repository scope)'
+    required: false
+    default: ''
+  codeberg_url:
+    description: 'Target Codeberg repo HTTPS URL'
+    required: false
+    default: ''
+  codeberg_pat:
+    description: 'Codeberg PAT (repo write scope)'
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - shell: bash
+      env:
+        GITHUB_TOKEN: ''
+        GH_TOKEN: ${{ github.token }}
+        SOURCE_REPO: ${{ inputs.source_repo || format('{0}/{1}.git', github.server_url, github.repository) }}
+        GITLAB_URL: ${{ inputs.gitlab_url }}
+        GITLAB_PAT: ${{ inputs.gitlab_pat }}
+        CODEBERG_URL: ${{ inputs.codeberg_url }}
+        CODEBERG_PAT: ${{ inputs.codeberg_pat }}
+      run: ${{ github.action_path }}/scripts/mirror.sh
+
+...

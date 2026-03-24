@@ -1,0 +1,7 @@
+# Repos to mirror via central hub (mirror-all.yaml).
+# Each entry: source (GitHub), gitlab (optional), codeberg (optional).
+# Example:
+# - source: https://github.com/qte77/Agents-eval.git
+#   gitlab: https://gitlab.com/qte77/Agents-eval.git
+#   codeberg: https://codeberg.org/qte77/Agents-eval.git
+[]

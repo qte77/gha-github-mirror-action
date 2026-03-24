@@ -1,0 +1,36 @@
+---
+name: Mirror All Repos
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.cfg.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: cfg
+        run: echo "matrix=$(yq -o=json config/repos.yaml)" >> "$GITHUB_OUTPUT"
+
+  mirror:
+    needs: load
+    if: needs.load.outputs.matrix != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo: ${{ fromJson(needs.load.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      # Reason: uses: ./ pre-bootstrap; switch to @v1 after first publish
+      - uses: actions/checkout@v6
+      - uses: ./
+        with:
+          source_repo: ${{ matrix.repo.source }}
+          gitlab_url: ${{ matrix.repo.gitlab }}
+          gitlab_pat: ${{ secrets.GITLAB_PAT }}
+          codeberg_url: ${{ matrix.repo.codeberg }}
+          codeberg_pat: ${{ secrets.CODEBERG_PAT }}
