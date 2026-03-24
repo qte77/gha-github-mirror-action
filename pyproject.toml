@@ -1,0 +1,26 @@
+[project]
+name = "gha-github-mirror-action"
+version = "0.1.0"
+description = "GitHub Action to mirror repos to GitLab and Codeberg"
+
+[tool.bumpversion]
+current_version = "0.1.0"
+commit = false
+tag = false
+allow_dirty = true
+sign_tags = false
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
+serialize = ["{major}.{minor}.{patch}"]
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+
+[[tool.bumpversion.files]]
+filename = "README.md"
+search = "version-{current_version}-8A2BE2"
+replace = "version-{new_version}-8A2BE2"
+
+[[tool.bumpversion.files]]
+filename = "CHANGELOG.md"
+search = "## [Unreleased]\n\n---"
+replace = "## [Unreleased]\n\n---\n\n## [{new_version}] - {now:%Y-%m-%d}"

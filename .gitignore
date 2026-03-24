@@ -1,0 +1,9 @@
+# Sandbox artifacts (Claude Code worktree)
+HEAD
+config
+hooks
+objects
+refs
+
+# Claude Code
+.claude/
