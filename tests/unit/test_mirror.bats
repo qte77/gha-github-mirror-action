@@ -6,6 +6,9 @@ MIRROR_SH="$BATS_TEST_DIRNAME/../../scripts/mirror.sh"
 
 setup() {
   export TMPDIR="${BATS_TMPDIR:-/tmp/claude-1000/bats-tmp}"
+  # Reason: CI runners may lack git identity; tests that commit need it
+  git config --global user.name "test" 2>/dev/null || true
+  git config --global user.email "test@test" 2>/dev/null || true
   # Clear all env vars mirror.sh reads
   unset SOURCE_REPO GITLAB_URL GITLAB_PAT CODEBERG_URL CODEBERG_PAT
 }
