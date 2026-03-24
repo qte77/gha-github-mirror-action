@@ -4,6 +4,10 @@
 # CODEBERG_URL, CODEBERG_PAT.
 # Exit codes: 0 = success, 1 = config error, 2 = git error
 
+# Reason: wrap entire script in a function so we can filter all output through sed
+# to ensure PATs never leak in logs (defense in depth beyond ::add-mask::)
+_main() {
+
 # Reason: no set -e — we handle errors explicitly to continue pushing to remaining targets
 set -uo pipefail
 
@@ -106,3 +110,18 @@ if [ "$push_failed" = true ]; then
 fi
 
 echo "All targets mirrored successfully."
+
+} # end _main
+
+# Reason: run _main and scrub all PATs from combined stdout+stderr
+# Build sed expression to replace all configured PATs with ***
+_sed_expr=""
+[ -n "${GITLAB_PAT:-}" ] && _sed_expr="${_sed_expr}s|${GITLAB_PAT}|***|g;"
+[ -n "${CODEBERG_PAT:-}" ] && _sed_expr="${_sed_expr}s|${CODEBERG_PAT}|***|g;"
+
+if [ -n "$_sed_expr" ]; then
+  _main 2>&1 | sed "$_sed_expr"
+  exit "${PIPESTATUS[0]}"
+else
+  _main
+fi

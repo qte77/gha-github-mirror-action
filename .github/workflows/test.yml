@@ -21,20 +21,6 @@ jobs:
           sudo /tmp/bats-core/install.sh /usr/local
           bats --version
 
-      - name: Debug info
-        run: |
-          echo "=== bats version ==="
-          which bats && bats --version || echo "bats not found"
-          echo "=== files ==="
-          ls -la scripts/mirror.sh
-          ls -la tests/unit/
-          echo "=== test quick run ==="
-          bats tests/unit/test_infra_files.bats 2>&1 || true
-          echo "=== mirror test ==="
-          bats tests/unit/test_mirror.bats 2>&1 || true
-        env:
-          TMPDIR: /tmp
-
       - name: Run bats tests
         run: bats tests/unit/
         env:
