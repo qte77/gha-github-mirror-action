@@ -65,10 +65,10 @@ setup() {
 
 @test "clones source as bare repo" {
   # Create a local git repo to use as source
-  local src_repo="$TMPDIR/test-source-$$"
+  local src_repo="$TMPDIR/test-source-$BATS_TEST_NUMBER"
   mkdir -p "$src_repo" && git -C "$src_repo" init --bare
   # Reason: need at least one ref for bare clone to succeed
-  local work="$TMPDIR/test-work-$$"
+  local work="$TMPDIR/test-work-$BATS_TEST_NUMBER"
   git clone "$src_repo" "$work"
   git -C "$work" commit --allow-empty -m "init"
   git -C "$work" push origin main 2>/dev/null || git -C "$work" push origin master 2>/dev/null
@@ -94,11 +94,11 @@ setup() {
 
 @test "pushes --mirror to gitlab target" {
   # Setup local source repo
-  local src_repo="$TMPDIR/test-push-src-$$"
-  local target_repo="$TMPDIR/test-push-gl-$$"
+  local src_repo="$TMPDIR/test-push-src-$BATS_TEST_NUMBER"
+  local target_repo="$TMPDIR/test-push-gl-$BATS_TEST_NUMBER"
   mkdir -p "$src_repo" && git -C "$src_repo" init --bare
   mkdir -p "$target_repo" && git -C "$target_repo" init --bare
-  local work="$TMPDIR/test-push-work-$$"
+  local work="$TMPDIR/test-push-work-$BATS_TEST_NUMBER"
   git clone "$src_repo" "$work"
   git -C "$work" commit --allow-empty -m "init"
   git -C "$work" push origin main 2>/dev/null || git -C "$work" push origin master 2>/dev/null
@@ -113,11 +113,11 @@ setup() {
 }
 
 @test "pushes --mirror to codeberg target" {
-  local src_repo="$TMPDIR/test-push-src-cb-$$"
-  local target_repo="$TMPDIR/test-push-cb-$$"
+  local src_repo="$TMPDIR/test-push-src-cb-$BATS_TEST_NUMBER"
+  local target_repo="$TMPDIR/test-push-cb-$BATS_TEST_NUMBER"
   mkdir -p "$src_repo" && git -C "$src_repo" init --bare
   mkdir -p "$target_repo" && git -C "$target_repo" init --bare
-  local work="$TMPDIR/test-push-work-cb-$$"
+  local work="$TMPDIR/test-push-work-cb-$BATS_TEST_NUMBER"
   git clone "$src_repo" "$work"
   git -C "$work" commit --allow-empty -m "init"
   git -C "$work" push origin main 2>/dev/null || git -C "$work" push origin master 2>/dev/null
@@ -131,13 +131,13 @@ setup() {
 }
 
 @test "pushes to both targets when both configured" {
-  local src_repo="$TMPDIR/test-push-both-src-$$"
-  local gl_target="$TMPDIR/test-push-both-gl-$$"
-  local cb_target="$TMPDIR/test-push-both-cb-$$"
+  local src_repo="$TMPDIR/test-push-both-src-$BATS_TEST_NUMBER"
+  local gl_target="$TMPDIR/test-push-both-gl-$BATS_TEST_NUMBER"
+  local cb_target="$TMPDIR/test-push-both-cb-$BATS_TEST_NUMBER"
   mkdir -p "$src_repo" && git -C "$src_repo" init --bare
   mkdir -p "$gl_target" && git -C "$gl_target" init --bare
   mkdir -p "$cb_target" && git -C "$cb_target" init --bare
-  local work="$TMPDIR/test-push-both-work-$$"
+  local work="$TMPDIR/test-push-both-work-$BATS_TEST_NUMBER"
   git clone "$src_repo" "$work"
   git -C "$work" commit --allow-empty -m "init"
   git -C "$work" push origin main 2>/dev/null || git -C "$work" push origin master 2>/dev/null
@@ -154,11 +154,11 @@ setup() {
 }
 
 @test "continues to second target if first push fails" {
-  local src_repo="$TMPDIR/test-continue-src-$$"
-  local cb_target="$TMPDIR/test-continue-cb-$$"
+  local src_repo="$TMPDIR/test-continue-src-$BATS_TEST_NUMBER"
+  local cb_target="$TMPDIR/test-continue-cb-$BATS_TEST_NUMBER"
   mkdir -p "$src_repo" && git -C "$src_repo" init --bare
   mkdir -p "$cb_target" && git -C "$cb_target" init --bare
-  local work="$TMPDIR/test-continue-work-$$"
+  local work="$TMPDIR/test-continue-work-$BATS_TEST_NUMBER"
   git clone "$src_repo" "$work"
   git -C "$work" commit --allow-empty -m "init"
   git -C "$work" push origin main 2>/dev/null || git -C "$work" push origin master 2>/dev/null
@@ -179,9 +179,9 @@ setup() {
 # --- Security ---
 
 @test "PAT not visible in error output" {
-  local src_repo="$TMPDIR/test-sec-src-$$"
+  local src_repo="$TMPDIR/test-sec-src-$BATS_TEST_NUMBER"
   mkdir -p "$src_repo" && git -C "$src_repo" init --bare
-  local work="$TMPDIR/test-sec-work-$$"
+  local work="$TMPDIR/test-sec-work-$BATS_TEST_NUMBER"
   git clone "$src_repo" "$work"
   git -C "$work" commit --allow-empty -m "init"
   git -C "$work" push origin main 2>/dev/null || git -C "$work" push origin master 2>/dev/null
