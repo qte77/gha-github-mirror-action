@@ -64,28 +64,29 @@ setup() {
 # --- Clone operation ---
 
 @test "clones source as bare repo" {
-  # Create a local git repo to use as source
   local src_repo="$TMPDIR/test-source-$BATS_TEST_NUMBER"
+  local target_repo="$TMPDIR/test-clone-target-$BATS_TEST_NUMBER"
   mkdir -p "$src_repo" && git -C "$src_repo" init --bare
-  # Reason: need at least one ref for bare clone to succeed
+  mkdir -p "$target_repo" && git -C "$target_repo" init --bare
   local work="$TMPDIR/test-work-$BATS_TEST_NUMBER"
   git clone "$src_repo" "$work"
   git -C "$work" commit --allow-empty -m "init"
   git -C "$work" push origin main 2>/dev/null || git -C "$work" push origin master 2>/dev/null
 
   export SOURCE_REPO="$src_repo"
-  export GITLAB_URL="https://gitlab.com/test/repo.git"
-  export GITLAB_PAT="glpat-fake123"
-  # Reason: push will fail (fake URL) but clone should succeed; check exit=2 (git error, not config)
+  # Reason: use local bare repo as target to avoid network calls
+  export GITLAB_URL="$target_repo"
+  export GITLAB_PAT="fake"
   run "$MIRROR_SH"
-  [ "$status" -eq 2 ]
+  [ "$status" -eq 0 ]
   [[ "$output" == *"Cloning"* ]] || [[ "$output" == *"cloning"* ]] || [[ "$output" == *"clone"* ]]
 }
 
 @test "fails with exit 2 when clone fails" {
-  export SOURCE_REPO="https://nonexistent.invalid/repo.git"
-  export GITLAB_URL="https://gitlab.com/test/repo.git"
-  export GITLAB_PAT="glpat-fake123"
+  # Reason: use local nonexistent path to avoid DNS/network hang
+  export SOURCE_REPO="$TMPDIR/nonexistent-repo-$BATS_TEST_NUMBER"
+  export GITLAB_URL="$TMPDIR/fake-target-$BATS_TEST_NUMBER"
+  export GITLAB_PAT="fake"
   run "$MIRROR_SH"
   [ "$status" -eq 2 ]
 }
@@ -164,8 +165,8 @@ setup() {
   git -C "$work" push origin main 2>/dev/null || git -C "$work" push origin master 2>/dev/null
 
   export SOURCE_REPO="$src_repo"
-  # Reason: first target is fake URL (will fail), second is local (will succeed)
-  export GITLAB_URL="https://nonexistent.invalid/repo.git"
+  # Reason: first target is nonexistent local path (will fail), second is local bare repo (will succeed)
+  export GITLAB_URL="$TMPDIR/nonexistent-push-target-$BATS_TEST_NUMBER"
   export GITLAB_PAT="fake"
   export CODEBERG_URL="$cb_target"
   export CODEBERG_PAT="fake"
@@ -187,7 +188,8 @@ setup() {
   git -C "$work" push origin main 2>/dev/null || git -C "$work" push origin master 2>/dev/null
 
   export SOURCE_REPO="$src_repo"
-  export GITLAB_URL="https://nonexistent.invalid/repo.git"
+  # Reason: use nonexistent local path to trigger push failure without network
+  export GITLAB_URL="$TMPDIR/nonexistent-sec-target-$BATS_TEST_NUMBER"
   export GITLAB_PAT="glpat-supersecret123"
   run "$MIRROR_SH"
   # Reason: PAT must never appear in output — could leak in CI logs

@@ -49,12 +49,11 @@ fi
 echo "Config valid. Source: $SOURCE_REPO"
 
 # --- Mask PATs in CI logs ---
-# Reason: ::add-mask:: is a GitHub Actions command; harmless outside GHA
-if [ -n "${GITLAB_PAT:-}" ]; then
-  echo "::add-mask::$GITLAB_PAT"
-fi
-if [ -n "${CODEBERG_PAT:-}" ]; then
-  echo "::add-mask::$CODEBERG_PAT"
+# Reason: ::add-mask:: is a GitHub Actions workflow command; outside GHA it's a no-op
+# Redirect to /dev/null when not in GHA to avoid printing PATs
+if [ -n "${GITHUB_ACTIONS:-}" ]; then
+  [ -n "${GITLAB_PAT:-}" ] && echo "::add-mask::$GITLAB_PAT"
+  [ -n "${CODEBERG_PAT:-}" ] && echo "::add-mask::$CODEBERG_PAT"
 fi
 
 # --- Clone source as bare repo ---
@@ -79,11 +78,14 @@ push_mirror() {
     push_url=$(echo "$url" | sed "s|https://|https://x:${pat}@|")
   fi
   echo "Pushing --mirror to $label ($url)..."
-  if ! git push --mirror "$push_url" 2>&1; then
+  # Reason: pipe through sed to scrub PAT from git error output (git may embed URL with creds)
+  local push_output
+  if push_output=$(git push --mirror "$push_url" 2>&1 | sed "s|$pat|***|g"); then
+    echo "OK: Pushed to $label"
+  else
+    echo "$push_output" | sed "s|$pat|***|g"
     echo "ERROR: Failed to push to $label"
     push_failed=true
-  else
-    echo "OK: Pushed to $label"
   fi
 }
 
