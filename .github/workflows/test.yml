@@ -19,8 +19,9 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/bats-core/bats-core.git /tmp/bats-core
           sudo /tmp/bats-core/install.sh /usr/local
+          bats --version
 
       - name: Run bats tests
-        run: bats tests/unit/
+        run: bats --tap tests/unit/
         env:
           TMPDIR: /tmp
