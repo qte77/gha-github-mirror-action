@@ -4,7 +4,12 @@
 # CODEBERG_URL, CODEBERG_PAT.
 # Exit codes: 0 = success, 1 = config error, 2 = git error
 
-set -euo pipefail
+# Reason: wrap entire script in a function so we can filter all output through sed
+# to ensure PATs never leak in logs (defense in depth beyond ::add-mask::)
+_main() {
+
+# Reason: no set -e — we handle errors explicitly to continue pushing to remaining targets
+set -uo pipefail
 
 # --- Config validation ---
 
@@ -46,3 +51,77 @@ if [ "$has_target" = false ]; then
 fi
 
 echo "Config valid. Source: $SOURCE_REPO"
+
+# --- Mask PATs in CI logs ---
+# Reason: ::add-mask:: is a GitHub Actions workflow command; outside GHA it's a no-op
+# Redirect to /dev/null when not in GHA to avoid printing PATs
+if [ -n "${GITHUB_ACTIONS:-}" ]; then
+  [ -n "${GITLAB_PAT:-}" ] && echo "::add-mask::$GITLAB_PAT"
+  [ -n "${CODEBERG_PAT:-}" ] && echo "::add-mask::$CODEBERG_PAT"
+fi
+
+# --- Clone source as bare repo ---
+
+CLONE_DIR="${TMPDIR:-/tmp}/mirror-repo-$$"
+echo "Cloning $SOURCE_REPO (bare)..."
+if ! git clone --bare "$SOURCE_REPO" "$CLONE_DIR" 2>&1; then
+  echo "ERROR: Failed to clone $SOURCE_REPO"
+  exit 2
+fi
+cd "$CLONE_DIR"
+
+# --- Push to targets ---
+
+push_failed=false
+
+push_mirror() {
+  local label="$1" url="$2" pat="$3"
+  local push_url="$url"
+  # Reason: inject PAT for HTTPS URLs only; local paths don't need auth
+  if [[ "$url" == https://* ]]; then
+    push_url=$(echo "$url" | sed "s|https://|https://x:${pat}@|")
+  fi
+  echo "Pushing --mirror to $label ($url)..."
+  # Reason: pipe through sed to scrub PAT from git error output (git may embed URL with creds)
+  local push_output
+  if push_output=$(git push --mirror "$push_url" 2>&1 | sed "s|$pat|***|g"); then
+    echo "OK: Pushed to $label"
+  else
+    echo "$push_output" | sed "s|$pat|***|g"
+    echo "ERROR: Failed to push to $label"
+    push_failed=true
+  fi
+}
+
+if [ -n "${GITLAB_URL:-}" ] && [ -n "${GITLAB_PAT:-}" ]; then
+  push_mirror "GitLab" "$GITLAB_URL" "$GITLAB_PAT"
+fi
+
+if [ -n "${CODEBERG_URL:-}" ] && [ -n "${CODEBERG_PAT:-}" ]; then
+  push_mirror "Codeberg" "$CODEBERG_URL" "$CODEBERG_PAT"
+fi
+
+# --- Cleanup ---
+rm -rf "$CLONE_DIR"
+
+if [ "$push_failed" = true ]; then
+  echo "ERROR: One or more push targets failed"
+  exit 2
+fi
+
+echo "All targets mirrored successfully."
+
+} # end _main
+
+# Reason: run _main and scrub all PATs from combined stdout+stderr
+# Build sed expression to replace all configured PATs with ***
+_sed_expr=""
+[ -n "${GITLAB_PAT:-}" ] && _sed_expr="${_sed_expr}s|${GITLAB_PAT}|***|g;"
+[ -n "${CODEBERG_PAT:-}" ] && _sed_expr="${_sed_expr}s|${CODEBERG_PAT}|***|g;"
+
+if [ -n "$_sed_expr" ]; then
+  _main 2>&1 | sed "$_sed_expr"
+  exit "${PIPESTATUS[0]}"
+else
+  _main
+fi

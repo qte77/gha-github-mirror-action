@@ -10,4 +10,14 @@ Types of changes:
 
 ## [Unreleased]
 
+### Added
+
+- Core `mirror.sh` script: config validation, bare clone, `--mirror` push to GitLab and/or Codeberg
+- PAT masking in CI logs (`::add-mask::` in GHA, sed scrubbing in push output)
+- Dual-target support: continues to second target if first push fails
+- `action.yaml`: composite action with `source_repo`, gitlab, codeberg inputs
+- `mirror-all.yaml`: central hub workflow (schedule + dispatch, matrix from `config/repos.yaml`)
+- Infrastructure: bump-and-release, codeql, test (BATS), dependabot, cleanup script
+- 29 BATS tests: 16 infra meta-tests + 13 mirror logic tests
+
 ---
