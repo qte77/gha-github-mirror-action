@@ -107,7 +107,7 @@ setup() {
 
 # --- LICENSE ---
 
-@test "LICENSE exists with MIT" {
+@test "LICENSE exists with Apache-2.0" {
   [ -f "$REPO_ROOT/LICENSE" ]
-  grep -q "MIT" "$REPO_ROOT/LICENSE"
+  grep -q "Apache License" "$REPO_ROOT/LICENSE"
 }
