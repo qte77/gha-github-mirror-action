@@ -31,7 +31,7 @@ jobs:
           gitlab_pat: ${{ secrets.GITLAB_PAT }}
           codeberg_url: https://codeberg.org/org/repo.git
           codeberg_pat: ${{ secrets.CODEBERG_PAT }}
-```
+```bash
 
 ### Central hub (schedule + dispatch)
 
