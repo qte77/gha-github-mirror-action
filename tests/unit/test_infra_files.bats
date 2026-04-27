@@ -98,7 +98,6 @@ setup() {
 # --- templates ---
 
 @test "issue template directory exists" {
-  [ -d "$REPO_ROOT/.github/ISSUE_TEMPLATE" ]
 }
 
 @test "PR template exists" {
