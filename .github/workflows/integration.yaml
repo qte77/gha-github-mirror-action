@@ -1,5 +1,5 @@
 ---
-name: Self-test Action
+name: Integration
 
 on:
   push:

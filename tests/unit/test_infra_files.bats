@@ -65,13 +65,13 @@ setup() {
 }
 
 @test "test workflow runs bats" {
-  [ -f "$REPO_ROOT/.github/workflows/test.yml" ]
-  grep -q "bats" "$REPO_ROOT/.github/workflows/test.yml"
+  [ -f "$REPO_ROOT/.github/workflows/test.yaml" ]
+  grep -q "bats" "$REPO_ROOT/.github/workflows/test.yaml"
 }
 
-@test "self-test workflow exists and uses local action" {
-  [ -f "$REPO_ROOT/.github/workflows/test-action.yml" ]
-  grep -q "uses: ./" "$REPO_ROOT/.github/workflows/test-action.yml"
+@test "integration workflow exists and uses local action" {
+  [ -f "$REPO_ROOT/.github/workflows/integration.yaml" ]
+  grep -q "uses: ./" "$REPO_ROOT/.github/workflows/integration.yaml"
 }
 
 # --- cleanup script ---
