@@ -13,6 +13,7 @@ Types of changes:
 
 ### Added
 
+- `scripts/clone-local.sh`: clone GitHub repos to a local directory as bare mirrors (`--mirror` first run, fetch on re-run). Supports `OWNER` (via `gh repo list`) or `CONFIG` (curated YAML) modes. See README → Usage → Local clone.
 - Core `mirror.sh` script: config validation, bare clone, `--mirror` push to GitLab and/or Codeberg
 - PAT masking in CI logs (`::add-mask::` in GHA, sed scrubbing in push output)
 - Dual-target support: continues to second target if first push fails

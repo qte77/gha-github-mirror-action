@@ -35,6 +35,15 @@ setup() {
   [ -x "$REPO_ROOT/scripts/mirror.sh" ]
 }
 
+@test "clone-local.sh exists, is executable, and documents OWNER/CONFIG/DEST" {
+  [ -f "$REPO_ROOT/scripts/clone-local.sh" ]
+  [ -x "$REPO_ROOT/scripts/clone-local.sh" ]
+  grep -q "OWNER" "$REPO_ROOT/scripts/clone-local.sh"
+  grep -q "CONFIG" "$REPO_ROOT/scripts/clone-local.sh"
+  grep -q "DEST" "$REPO_ROOT/scripts/clone-local.sh"
+  grep -q -- "--mirror" "$REPO_ROOT/scripts/clone-local.sh"
+}
+
 # --- config ---
 
 @test "config/repos.yaml exists for central hub" {
