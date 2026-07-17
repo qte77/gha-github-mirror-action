@@ -12,7 +12,7 @@ jobs:
     outputs:
       matrix: ${{ steps.cfg.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - id: cfg
         run: echo "matrix=$(yq -o=json config/repos.yaml)" >> "$GITHUB_OUTPUT"
 
