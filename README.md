@@ -2,21 +2,25 @@
 
 Mirror GitHub repositories to GitLab and/or Codeberg. All branches, tags, and refs.
 
-![Version](https://img.shields.io/badge/version-0.1.0-8A2BE2)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue)](CHANGELOG.md)
 [![mirror-all](https://github.com/qte77/gha-github-mirror-action/actions/workflows/mirror-all.yaml/badge.svg)](https://github.com/qte77/gha-github-mirror-action/actions/workflows/mirror-all.yaml)
 [![BATS](https://github.com/qte77/gha-github-mirror-action/actions/workflows/test.yaml/badge.svg)](https://github.com/qte77/gha-github-mirror-action/actions/workflows/test.yaml)
 [![CodeFactor](https://www.codefactor.io/repository/github/qte77/gha-github-mirror-action/badge)](https://www.codefactor.io/repository/github/qte77/gha-github-mirror-action)
 [![CodeQL](https://github.com/qte77/gha-github-mirror-action/actions/workflows/codeql.yaml/badge.svg)](https://github.com/qte77/gha-github-mirror-action/actions/workflows/codeql.yaml)
 [![Dependabot](https://github.com/qte77/gha-github-mirror-action/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/qte77/gha-github-mirror-action/actions/workflows/dependabot/dependabot-updates)
 
-**Multi-mode**: marketplace action for a single repo, central hub mirroring many on a schedule, or local script for offline backups.
+## What
 
-For version history have a look at the [CHANGELOG](CHANGELOG.md).
+- Runs as a marketplace action for a single repo, a central hub mirroring many repos on a schedule, or a local script for offline backups
+- Validates that at least one target (URL + PAT pair) is configured
+- Masks all PATs in CI logs to prevent credential leaks
+- Clones the source repository as a bare repo
+- Pushes `--mirror` to each configured target (GitLab and/or Codeberg)
+- Scrubs PATs from all output as a defense-in-depth measure
+- Cleans up the temporary clone directory
 
-## Usage
-
-### Per-repo (marketplace action)
+## How
 
 ```yaml
 name: Mirror
@@ -33,48 +37,7 @@ jobs:
           codeberg_pat: ${{ secrets.CODEBERG_PAT }}
 ```
 
-### Central hub (schedule + dispatch)
-
-The repo includes a `mirror-all.yaml` workflow that reads `config/repos.yaml` and mirrors all listed repos via matrix jobs.
-
-### Local clone (script-only)
-
-Mirror GitHub repos to a local directory using just `scripts/clone-local.sh` — no GitHub Actions, no PATs, no GitLab/Codeberg. Bare `--mirror` clones; idempotent re-runs (auto-prune deletions on subsequent fetches).
-
-```bash
-# All public repos for an owner
-OWNER=qte77 ./scripts/clone-local.sh
-
-# Subset from a curated list (same shape as config/repos.yaml)
-CONFIG=config/repos.yaml ./scripts/clone-local.sh
-
-# Custom destination (default: ./mirrors)
-OWNER=qte77 DEST=~/backups/github ./scripts/clone-local.sh
-
-# Show usage
-./scripts/clone-local.sh --help
-```
-
-| Env var | Default | Purpose |
-|---|---|---|
-| `OWNER` | unset | GitHub user/org → `gh repo list` (mutually exclusive with `CONFIG`) |
-| `CONFIG` | `config/repos.yaml` | Curated YAML list (when `OWNER` is unset) |
-| `DEST` | `./mirrors` | Local directory for the bare repo clones |
-| `VISIBILITY` | unset | Pass-through to `gh repo list --visibility` |
-| `LIMIT` | `1000` | Pass-through to `gh repo list --limit` |
-
-Requires `git` and `gh` (authenticated for private repos).
-
-## What it does
-
-1. Validates that at least one target (URL + PAT pair) is configured
-2. Masks all PATs in CI logs to prevent credential leaks
-3. Clones the source repository as a bare repo
-4. Pushes `--mirror` to each configured target (GitLab and/or Codeberg)
-5. Scrubs PATs from all output as a defense-in-depth measure
-6. Cleans up the temporary clone directory
-
-## Inputs
+### Inputs
 
 | Name | Required | Default | Description |
 |------|----------|---------|-------------|
@@ -84,14 +47,23 @@ Requires `git` and `gh` (authenticated for private repos).
 | `codeberg_url` | No | | Target Codeberg repo HTTPS URL |
 | `codeberg_pat` | No | | Codeberg PAT (repo write scope) |
 
-At least one target (URL + PAT pair) must be configured.
+At least one target (URL + PAT pair) must be configured. For central-hub scheduling across many
+repos and the local-clone script (no GitHub Actions, no PATs required), see
+[docs/usage.md](docs/usage.md).
 
-## Development
+## Why
 
-```bash
-# Run tests
-bats tests/unit/
-```
+A `git clone --mirror` + cron script uses the same git primitives but needs its own always-on
+host, secret storage, and someone to notice when it silently stops. This action runs inside GitHub
+Actions you already have: PATs live in encrypted secrets, a failed run is a red check, and one
+workflow mirrors a single repo or fans out to many from a scheduled hub — no separate
+infrastructure.
+
+## Refs
+
+- [CHANGELOG](CHANGELOG.md)
+- [CONTRIBUTING](CONTRIBUTING.md)
+- [Usage details](docs/usage.md)
 
 ## License
 
