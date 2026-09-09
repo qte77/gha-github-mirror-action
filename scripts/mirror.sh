@@ -66,11 +66,16 @@ fi
 # or a git argv — turns "the substitution/URL is safe because real PAT charsets
 # happen not to collide with the delimiter" into safe-by-construction. A PAT
 # containing @, :, /, %, #, ? would also break URL userinfo parsing regardless of
-# the scrub mechanism.
+# the scrub mechanism. `.` is allowed: GitHub's installation tokens (including
+# GITHUB_TOKEN / github.token) are rolling out a ghs_APPID_JWT format — a JWT,
+# which uses `.` as a segment separator (github.blog changelog, 2026-04-24).
+# GitHub explicitly recommends against hardcoded token-format validation, but
+# this guard exists for our own URL/argv safety, not to mirror GitHub's format —
+# `.` is safe in both contexts, so the charset widens rather than being dropped.
 for _pat_var in SOURCE_PAT GITLAB_PAT CODEBERG_PAT GH_TARGET_PAT; do
   _pat_val="${!_pat_var:-}"
-  if [ -n "$_pat_val" ] && [[ ! "$_pat_val" =~ ^[A-Za-z0-9_-]+$ ]]; then
-    echo "ERROR: $_pat_var contains invalid characters (must match ^[A-Za-z0-9_-]+\$)"
+  if [ -n "$_pat_val" ] && [[ ! "$_pat_val" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+    echo "ERROR: $_pat_var contains invalid characters (must match ^[A-Za-z0-9_.-]+\$)"
     exit 1
   fi
 done

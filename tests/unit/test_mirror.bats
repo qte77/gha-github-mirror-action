@@ -130,7 +130,7 @@ SHIM
   [ "$status" -eq 1 ]
 }
 
-@test "rejects a PAT containing characters outside [A-Za-z0-9_-]" {
+@test "rejects a PAT containing characters outside [A-Za-z0-9_.-]" {
   export SOURCE_REPO="$TMPDIR/test-source-$BATS_TEST_NUMBER"
   export GITLAB_URL="https://gitlab.com/a/r.git"
   export GITLAB_PAT="bad;pat"
@@ -138,6 +138,29 @@ SHIM
   [ "$status" -eq 1 ]
   [[ "$output" == *"GITLAB_PAT"* ]]
   [[ "$output" == *"invalid"* ]] || [[ "$output" == *"Invalid"* ]]
+}
+
+@test "accepts a PAT containing dots (JWT-format installation tokens)" {
+  # Reason: GitHub's installation tokens (incl. GITHUB_TOKEN / github.token) are
+  # rolling out a ghs_APPID_JWT format — a JWT, which contains dots as segment
+  # separators (verified via github.blog changelog 2026-04-24; GitHub explicitly
+  # advises against hardcoded pattern validation, but our charset guard exists for
+  # OUR OWN URL/argv safety, not to mirror GitHub's format, so it widens to allow
+  # the dot rather than being dropped).
+  local src_repo="$TMPDIR/test-dotpat-src-$BATS_TEST_NUMBER"
+  local target_repo="$TMPDIR/test-dotpat-target-$BATS_TEST_NUMBER"
+  mkdir -p "$src_repo" && git -C "$src_repo" init --bare
+  mkdir -p "$target_repo" && git -C "$target_repo" init --bare
+  local work="$TMPDIR/test-dotpat-work-$BATS_TEST_NUMBER"
+  git clone "$src_repo" "$work"
+  git -C "$work" commit --allow-empty -m "init"
+  git -C "$work" push origin main 2>/dev/null || git -C "$work" push origin master 2>/dev/null
+
+  export SOURCE_REPO="$src_repo"
+  export GITLAB_URL="$target_repo"
+  export GITLAB_PAT="ghs_app123_abc.def.ghi"
+  run "$MIRROR_SH"
+  [ "$status" -eq 0 ]
 }
 
 # --- Clone operation ---
