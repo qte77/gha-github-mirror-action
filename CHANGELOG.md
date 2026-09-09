@@ -20,6 +20,18 @@ Types of changes:
 - `action.yaml`: composite action with `source_repo`, gitlab, codeberg inputs
 - `mirror-all.yaml`: central hub workflow (schedule + dispatch, matrix from `config/repos.yaml`)
 - Infrastructure: bump-and-release, codeql, test (BATS), dependabot, cleanup script
-- 29 BATS tests: 16 infra meta-tests + 13 mirror logic tests
+- BATS test suite covering infra meta-tests, `mirror.sh` logic, and `clone-local.sh` behavior (see `tests/unit/`)
+- `source_pat` input: authenticates the clone of a private or non-GitHub source
+- `github_url`/`github_pat` inputs: mirror into a GitHub target (invert/router modes) as a third `push --mirror` call alongside GitLab/Codeberg. See README → Usage → Modes.
+- Self-clobber guard: refuses to mirror into the repo running the action (HTTPS-form targets only)
+- Hub: `github` field in `config/repos.yaml`/`mirror-all.yaml` matrix, gating all three PATs on their matching URL being set
+- shellcheck + actionlint CI checks for `scripts/*.sh` and `.github/scripts/*.sh`
+- Dependabot `groups:` — weekly `github-actions-minor-patch` group for minor/patch updates
+
+### Fixed
+
+- `::add-mask::` now actually masks: previously emitted inside the scrubbed output pipeline, so the runner only ever saw `::add-mask::***` instead of the real PAT
+- Hub `mirror-all.yaml` passed every configured PAT unconditionally, even when its target URL was unset; PATs are now gated on their matching URL
+- Credential-on-disk residue: the credentialed clone URL no longer lingers in `$CLONE_DIR/config` after cloning, and the temporary clone directory is now cleaned up via a trap that also covers the clone-failure path
 
 ---

@@ -22,5 +22,5 @@ replace = "version-{new_version}-8A2BE2"
 
 [[tool.bumpversion.files]]
 filename = "CHANGELOG.md"
-search = "## [Unreleased]\n\n---"
-replace = "## [Unreleased]\n\n---\n\n## [{new_version}] - {now:%Y-%m-%d}"
+search = "## [Unreleased]"
+replace = "## [Unreleased]\n\n## [{new_version}] - {now:%Y-%m-%d}"
