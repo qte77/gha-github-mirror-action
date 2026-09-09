@@ -140,6 +140,14 @@ At least one target (URL + PAT pair) must be configured.
 ```bash
 # Run tests
 bats tests/unit/
+
+# Lint shell scripts (shellcheck ships preinstalled on ubuntu-latest CI runners;
+# nullglob so this still works if .github/scripts/ doesn't exist)
+shopt -s nullglob; targets=(scripts/*.sh .github/scripts/*.sh); shellcheck "${targets[@]}"
+
+# Lint workflow files (actionlint is not preinstalled; install locally first, e.g.
+# via https://github.com/rhysd/actionlint/blob/main/docs/install.md)
+actionlint
 ```
 
 ## License
