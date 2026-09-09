@@ -21,6 +21,7 @@ Types of changes:
 - Hub: `github` field in `config/repos.yaml`/`mirror-all.yaml` matrix, gating all three PATs on their matching URL being set
 - shellcheck + actionlint CI checks for `scripts/*.sh` and `.github/scripts/*.sh`
 - Dependabot `groups:` — weekly `github-actions-minor-patch` group for minor/patch updates
+- `lint-docs.yml`: supplementary markdownlint check for `docs/**/*.md`, closing a coverage gap in the shared reusable lint workflow (its `markdownlint-cli2-action` defaults to root-level files only)
 
 ### Fixed
 
