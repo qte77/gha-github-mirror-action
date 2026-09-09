@@ -1,6 +1,6 @@
 ---
 name: 'GitHub Mirror Action'
-description: 'Mirror GitHub repos to GitLab and/or Codeberg (all branches, tags, refs)'
+description: 'Mirror GitHub repos to GitLab, Codeberg, and/or a GitHub target (all branches, tags, refs)'
 author: 'qte77'
 branding:
   icon: 'copy'
@@ -8,6 +8,10 @@ branding:
 inputs:
   source_repo:
     description: 'Source repo URL (defaults to current repo)'
+    required: false
+    default: ''
+  source_pat:
+    description: 'PAT for the source repo, when it requires authentication (e.g. a private repo, or a non-GitHub source)'
     required: false
     default: ''
   gitlab_url:
@@ -26,6 +30,14 @@ inputs:
     description: 'Codeberg PAT (repo write scope)'
     required: false
     default: ''
+  github_url:
+    description: 'Target GitHub repo HTTPS URL; must not be the repo running the action'
+    required: false
+    default: ''
+  github_pat:
+    description: 'GitHub PAT for the target repo (contents: read+write scope)'
+    required: false
+    default: ''
 runs:
   using: 'composite'
   steps:
@@ -34,10 +46,13 @@ runs:
         GITHUB_TOKEN: ''
         GH_TOKEN: ${{ github.token }}
         SOURCE_REPO: ${{ inputs.source_repo || format('{0}/{1}.git', github.server_url, github.repository) }}
+        SOURCE_PAT: ${{ inputs.source_pat }}
         GITLAB_URL: ${{ inputs.gitlab_url }}
         GITLAB_PAT: ${{ inputs.gitlab_pat }}
         CODEBERG_URL: ${{ inputs.codeberg_url }}
         CODEBERG_PAT: ${{ inputs.codeberg_pat }}
+        GH_TARGET_URL: ${{ inputs.github_url }}
+        GH_TARGET_PAT: ${{ inputs.github_pat }}
       run: ${{ github.action_path }}/scripts/mirror.sh
 
 ...
