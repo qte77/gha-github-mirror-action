@@ -6,11 +6,28 @@ MIRROR_SH="$BATS_TEST_DIRNAME/../../scripts/mirror.sh"
 
 setup() {
   export TMPDIR="${BATS_TMPDIR:-/tmp/claude-1000/bats-tmp}"
-  # Reason: CI runners may lack git identity; tests that commit need it
-  git config --global user.name "test" 2>/dev/null || true
-  git config --global user.email "test@test" 2>/dev/null || true
+  # Reason: CI runners (and a dev machine) may lack git identity, or have a real
+  # one that must not be touched; set it via env vars scoped to this test
+  # process only — never `git config --global`, which mutates the real
+  # developer's identity on disk and races with other test processes running
+  # in parallel worktrees.
+  export GIT_AUTHOR_NAME="test" GIT_AUTHOR_EMAIL="test@test"
+  export GIT_COMMITTER_NAME="test" GIT_COMMITTER_EMAIL="test@test"
+  # Reason: a machine with global commit signing enabled (gpgsign=true) rejects
+  # commits from this fake identity; force-disable signing for every git call
+  # this test process (and the mirror.sh subprocesses it spawns) makes, without
+  # touching the real global config.
+  export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
   # Clear all env vars mirror.sh reads
   unset SOURCE_REPO GITLAB_URL GITLAB_PAT CODEBERG_URL CODEBERG_PAT
+}
+
+teardown() {
+  # Reason: fixture dirs are named "<prefix>-$BATS_TEST_NUMBER" with no cleanup;
+  # without this, a second local run collides with the first run's leftovers
+  # ("destination path already exists") even though nothing is actually wrong.
+  rm -rf "$TMPDIR"/test-*-"$BATS_TEST_NUMBER" "$TMPDIR"/nonexistent-*-"$BATS_TEST_NUMBER" \
+    "$TMPDIR"/fake-target-"$BATS_TEST_NUMBER" 2>/dev/null || true
 }
 
 # --- Config validation ---
