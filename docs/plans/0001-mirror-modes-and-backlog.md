@@ -103,8 +103,8 @@ Design review surfaced two shipped bugs the arc fixes on the way: `::add-mask::`
 runner intact (emitted inside the scrubbed pipeline), and the hub passes PATs unconditionally while
 the script rejects PAT-without-URL.
 
-The arc also absorbs this session's backlog triage (dependabot grouping, two open bot PRs, issues
-#7–#11 / #33 / #36) so the repo has ONE plan and ONE remaining-work table.
+The arc also absorbs this session's backlog triage (dependabot grouping, two open bot PRs, issues #7–#11
+/ #33 / #36) so the repo has ONE plan and ONE remaining-work table.
 
 ## Source map (verified 2026-09-09 — three Explore agents + direct reads; line refs at HEAD `85aa1a6`)
 
@@ -141,8 +141,8 @@ workflows (blocked on qte77/.github#33). Labels: `enhancement`, `documentation`,
 **Verified vendor facts (docs.github.com, fetched 2026-09-09):** secret names "Must not start with
 the `GITHUB_` prefix", alphanumeric/`_` only, no leading digit, case-insensitive. Dereferencing a
 nonexistent context property "will evaluate to an empty string". Falsy values are exactly
-`false, 0, -0, "", '', null`. Dynamic `secrets[<expr>]` indexing is reported unsupported (community
-#25171 accepted answer) — not relied on.
+`false, 0, -0, "", '', null`. Dynamic `secrets[<expr>]` indexing is reported unsupported
+(community #25171 accepted answer) — not relied on.
 
 **Explicitly NOT vendor-documented — cite as runner-observed behaviour in any issue/PR body, never
 as "per the docs" (per the project's claim-verification rule):** (1) that `&&`/`||` return an
