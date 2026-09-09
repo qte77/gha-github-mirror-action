@@ -6,8 +6,11 @@ CLONE_SH="$BATS_TEST_DIRNAME/../../scripts/clone-local.sh"
 
 setup() {
   export TMPDIR="${BATS_TMPDIR:-/tmp/claude-1000/bats-tmp}"
-  git config --global user.name "test"  2>/dev/null || true
-  git config --global user.email "test@test" 2>/dev/null || true
+  # Reason: env vars scope the identity to this test process only — never
+  # `git config --global`, which mutates the real developer's identity on disk.
+  export GIT_AUTHOR_NAME="test" GIT_AUTHOR_EMAIL="test@test"
+  export GIT_COMMITTER_NAME="test" GIT_COMMITTER_EMAIL="test@test"
+  export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
   unset OWNER CONFIG DEST VISIBILITY LIMIT
   # Reason: provide a minimal yq stub when the real tool isn't installed
   # (sandboxed/dev environments). Handles only the `-r '.[].source' <file>`
