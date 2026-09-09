@@ -1,0 +1,18 @@
+---
+name: Tag Release
+
+# Watches pyproject.toml on main; creates the annotated v{version} tag once
+# bump-version.yml's PR has merged. Idempotent: no-ops if the version didn't
+# change, aborts (never overwrites/deletes) if the tag already exists.
+
+on:
+  push:
+    branches: [main]
+    paths: [pyproject.toml]
+
+jobs:
+  tag:
+    uses: qte77/.github/.github/workflows/tag-release.yml@4801217a20922cd54187fc7e4c98c7ea78c0ec9a  # main @ 2026-09-09
+    permissions:
+      contents: write
+...
