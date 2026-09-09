@@ -22,8 +22,12 @@ jobs:
           # Reason: create local git repos to test mirror without network
           SRC_REPO="/tmp/self-test-source"
           TARGET_REPO="/tmp/self-test-target"
+          TARGET_GH_REPO="/tmp/self-test-target-gh"
+          TARGET_GL3_REPO="/tmp/self-test-target-gl3"
           mkdir -p "$SRC_REPO" && git init --bare "$SRC_REPO"
           mkdir -p "$TARGET_REPO" && git init --bare "$TARGET_REPO"
+          mkdir -p "$TARGET_GH_REPO" && git init --bare "$TARGET_GH_REPO"
+          mkdir -p "$TARGET_GL3_REPO" && git init --bare "$TARGET_GL3_REPO"
 
           WORK="/tmp/self-test-work"
           git clone "$SRC_REPO" "$WORK"
@@ -34,8 +38,12 @@ jobs:
           git -C "$WORK" commit -m "seed commit"
           git -C "$WORK" push origin HEAD
 
-          echo "source=$SRC_REPO" >> "$GITHUB_OUTPUT"
-          echo "target=$TARGET_REPO" >> "$GITHUB_OUTPUT"
+          {
+            echo "source=$SRC_REPO"
+            echo "target=$TARGET_REPO"
+            echo "target_gh=$TARGET_GH_REPO"
+            echo "target_gl3=$TARGET_GL3_REPO"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Run mirror action
         uses: ./
@@ -52,3 +60,73 @@ jobs:
           echo "Target has $COMMIT_COUNT commits"
           [ "$COMMIT_COUNT" -ge 1 ]
           echo "Self-test passed: mirror pushed to target."
+
+      # Reason: local (non-https) source_repo + a set source_pat proves the PAT
+      # injection guard only fires for https:// sources, never for a local path —
+      # and this runs under a real GITHUB_ACTIONS=true job, exercising the
+      # self-clobber guard (via a local-path github_url) without tripping it.
+      - name: Run mirror action (gitlab + github targets, source_pat on local source)
+        uses: ./
+        with:
+          source_repo: ${{ steps.setup.outputs.source }}
+          source_pat: dummy-src-pat
+          gitlab_url: ${{ steps.setup.outputs.target }}
+          gitlab_pat: dummy-pat
+          github_url: ${{ steps.setup.outputs.target_gh }}
+          github_pat: dummy-pat
+
+      - name: Verify gitlab and github targets have a commit
+        env:
+          TARGET: ${{ steps.setup.outputs.target }}
+          TARGET_GH: ${{ steps.setup.outputs.target_gh }}
+        run: |
+          for T in "$TARGET" "$TARGET_GH"; do
+            COMMIT_COUNT=$(git -C "$T" rev-list --count --all)
+            echo "$T has $COMMIT_COUNT commits"
+            [ "$COMMIT_COUNT" -ge 1 ]
+          done
+          echo "gitlab + github dual-target push passed."
+
+      # Reason: proves a PAT works as the source credential for a public,
+      # currently-running GitHub repo — no source_repo (defaults to this repo's
+      # own HTTPS URL), source_pat: github.token. A bad supplied credential 401s
+      # even against a public repo, so a green result here is conclusive; if this
+      # step instead fails, the clone username needs to switch from `x` to
+      # `x-access-token` (see README/plan design notes) rather than the guard or
+      # pairing logic being at fault.
+      - name: Run mirror action (github.token self-source proof)
+        id: token_source
+        uses: ./
+        with:
+          source_pat: ${{ github.token }}
+          gitlab_url: ${{ steps.setup.outputs.target_gl3 }}
+          gitlab_pat: dummy-pat
+
+      - name: Verify github.token self-source target has a commit
+        env:
+          TARGET: ${{ steps.setup.outputs.target_gl3 }}
+        run: |
+          COMMIT_COUNT=$(git -C "$TARGET" rev-list --count --all)
+          echo "github.token self-source target has $COMMIT_COUNT commits"
+          [ "$COMMIT_COUNT" -ge 1 ]
+          echo "github.token self-source proof passed."
+
+      # Reason: negative proof of the self-clobber guard, without needing any
+      # external account — point github_url at this same repo/run and expect the
+      # step to fail before ever attempting a clone or push.
+      - name: Run mirror action (self-clobber negative proof)
+        id: self_clobber
+        continue-on-error: true
+        uses: ./
+        with:
+          source_repo: ${{ steps.setup.outputs.source }}
+          github_url: ${{ github.server_url }}/${{ github.repository }}.git
+          github_pat: dummy-pat
+
+      - name: Verify self-clobber guard tripped
+        run: |
+          if [ "${{ steps.self_clobber.outcome }}" != "failure" ]; then
+            echo "ERROR: expected the self-clobber guard to fail the step, got outcome=${{ steps.self_clobber.outcome }}"
+            exit 1
+          fi
+          echo "Self-clobber guard correctly refused to mirror into the running repo."

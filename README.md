@@ -79,10 +79,13 @@ Requires `git` and `gh` (authenticated for private repos).
 | Name | Required | Default | Description |
 |------|----------|---------|-------------|
 | `source_repo` | No | Current repo | Source repo URL |
+| `source_pat` | No | | PAT for the source repo, when it requires authentication (e.g. a private repo, or a non-GitHub source) |
 | `gitlab_url` | No | | Target GitLab repo HTTPS URL |
 | `gitlab_pat` | No | | GitLab PAT (`write_repository` scope) |
 | `codeberg_url` | No | | Target Codeberg repo HTTPS URL |
 | `codeberg_pat` | No | | Codeberg PAT (repo write scope) |
+| `github_url` | No | | Target GitHub repo HTTPS URL; must not be the repo running the action |
+| `github_pat` | No | | GitHub PAT for the target repo (`contents: read+write` scope) |
 
 At least one target (URL + PAT pair) must be configured.
 
