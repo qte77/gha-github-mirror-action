@@ -17,8 +17,14 @@ jobs:
 
       # Reason: shellcheck 0.9.0-1 ships preinstalled on the ubuntu-latest
       # (Ubuntu 24.04) runner image — no install step needed.
+      # Reason: nullglob so a future-empty/removed .github/scripts/ (planned in
+      # a sibling arc row) drops out of the glob instead of shellcheck failing
+      # on the unmatched literal pattern.
       - name: Run shellcheck
-        run: shellcheck scripts/*.sh .github/scripts/*.sh
+        run: |
+          shopt -s nullglob
+          targets=(scripts/*.sh .github/scripts/*.sh)
+          shellcheck "${targets[@]}"
 
   actionlint:
     runs-on: ubuntu-latest
