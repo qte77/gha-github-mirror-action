@@ -237,7 +237,13 @@ external source, close issues.
   read scope if it'll be a source too") — simpler than minting six separate least-privilege secrets
   (3 write-only target + 3 read-only source), at the cost of one PAT per host doing double duty.
   Deferred hardening, not done now: split into per-direction secrets (`SOURCE_PAT_GITLAB` etc.) if
-  least-privilege separation is ever required. `repos.yaml` gains only an optional `github` field.
+  least-privilege separation is ever required. **Hub limitation from this reuse:** it assumes source
+  and target on the same host share one account — a same-host cross-account router (e.g. GitLab
+  account A → GitLab account B) can't work through the hub with a single `GITLAB_PAT`, since a
+  write-scoped target credential presented back to the source host would be for the wrong account.
+  The per-repo marketplace action (not the hub) already covers that case via its own `source_pat`
+  input, so nothing is blocked — just don't expect the hub's `repos.yaml` schema to support it.
+  `repos.yaml` gains only an optional `github` field.
   `permissions: contents: read` added. Fallback if the ternary idiom fails the A5 syntax check: one
   `SOURCE_PAT` secret for all entries.
 - **Tests.** `mirror.sh` is a module → RED bats tests (table below). YAML wiring → `integration.yaml`
