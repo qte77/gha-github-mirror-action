@@ -11,6 +11,14 @@ Types of changes:
 
 ## [Unreleased]
 
+### Changed
+
+- Release mechanism: `bump-and-release.yaml` replaced by thin `uses:` callers (`bump-version.yml`, `tag-release.yml`, `publish-release.yml`) onto the `qte77/.github` reusable release workflows.
+
+### Removed
+
+- `.github/scripts/delete_branch_pr_tag.sh` (its failure-path deleted tags/releases, which the reusable workflows' cleanup steps deliberately avoid — see qte77/.github#23).
+
 ### Added
 
 - `scripts/clone-local.sh`: clone GitHub repos to a local directory as bare mirrors (`--mirror` first run, fetch on re-run). Supports `OWNER` (via `gh repo list`) or `CONFIG` (curated YAML) modes. See README → Usage → Local clone.
