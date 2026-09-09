@@ -39,7 +39,7 @@ The action supports three mirroring shapes, chosen by which inputs are set. All 
 `push --mirror` mechanics (see [What it does](#what-it-does)) — only the source and target change.
 
 **Push** (default, shown above) — mirror the current repo out to GitLab and/or Codeberg. No source
-credential needed; GitHub is read without a PAT.
+credential needed for a public source; GitHub is read without a PAT.
 
 **Invert / pull** — mirror *from* a repo on another host *into* a GitHub repo the workflow's account
 controls. Needs `source_pat` to read the non-GitHub source and `github_url`/`github_pat` to write the
