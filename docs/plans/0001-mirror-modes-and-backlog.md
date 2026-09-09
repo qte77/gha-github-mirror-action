@@ -52,7 +52,9 @@ delete branches. **Decide-by-default:** every open choice below has a default; p
 
 ```bash
 TMPDIR=/tmp bats tests/unit/                       # test.yaml gate
-shellcheck scripts/*.sh .github/scripts/*.sh       # once A3 lands (same flags as the CI step)
+shellcheck scripts/*.sh                            # once A3 lands (same flags as the CI step);
+                                                    # .github/scripts/*.sh removed by PR #46 (A8) —
+                                                    # don't wire that glob into A3's test.yaml step
 actionlint                                         # once A3 lands
 # unset BOTH tokens — GH_TOKEN is invalid, GITHUB_TOKEN lacks write access to this repo;
 # only then does gh/git fall back to the keyring login with proper `repo` scope
