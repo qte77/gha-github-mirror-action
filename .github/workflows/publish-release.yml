@@ -1,0 +1,65 @@
+---
+name: Publish Release
+
+# Dispatched manually after tag-release.yml has created the v{version} tag on
+# main. Publishes the GitHub Release from CHANGELOG.md's `## [version]` notes,
+# then force-moves the floating major tag (e.g. `v0`) to the release — the only
+# path by which consumers pinned to `@v0` (see hub `mirror-all.yaml`) pick up
+# the new release. The float is a PATCH on a tag ref, never a delete/overwrite
+# of the release or the immutable version tag (release immutability: a deleted
+# tag name is burned forever, HTTP 422 GH013 — see qte77/.github#23).
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (defaults to the latest vX.Y.Z tag)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  publish:
+    uses: qte77/.github/.github/workflows/publish-release.yml@4801217a20922cd54187fc7e4c98c7ea78c0ec9a  # main @ 2026-09-09
+    with:
+      tag: ${{ inputs.tag }}
+    permissions:
+      contents: write
+
+  float-major-tag:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      REPO: ${{ github.repository }}
+      TAG_INPUT: ${{ inputs.tag }}
+      TAG_PREFIX: v
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Force-move floating major tag to the published release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -n "$TAG_INPUT" ]; then
+            TAG="$TAG_INPUT"
+          else
+            TAG=$(git tag --list "${TAG_PREFIX}*" --sort=-v:refname | head -1)
+          fi
+          if [ -z "$TAG" ]; then
+            echo "no ${TAG_PREFIX}* tag found; nothing to float"
+            exit 1
+          fi
+          # Resolve to the commit the tag points at: works whether the tag is
+          # lightweight or annotated (tag-release.yml creates annotated tags).
+          COMMIT_SHA=$(gh api "repos/$REPO/commits/$TAG" --jq '.sha')
+          MAJOR="${TAG%%.*}"
+          gh api "repos/$REPO/git/refs/tags/$MAJOR" -X PATCH -f sha="$COMMIT_SHA" -F force=true 2>/dev/null \
+            || gh api "repos/$REPO/git/refs" -f ref="refs/tags/$MAJOR" -f sha="$COMMIT_SHA"
+...

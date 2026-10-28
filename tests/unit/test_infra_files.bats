@@ -64,9 +64,22 @@ setup() {
   grep -q "schedule" "$REPO_ROOT/.github/workflows/mirror-all.yaml"
 }
 
-@test "bump-and-release workflow exists with bump-my-version" {
-  [ -f "$REPO_ROOT/.github/workflows/bump-and-release.yaml" ]
-  grep -q "bump-my-version" "$REPO_ROOT/.github/workflows/bump-and-release.yaml"
+@test "bump-version workflow exists and calls the qte77/.github reusable" {
+  [ -f "$REPO_ROOT/.github/workflows/bump-version.yml" ]
+  grep -q "qte77/.github/.github/workflows/bump-version.yml@" \
+    "$REPO_ROOT/.github/workflows/bump-version.yml"
+}
+
+@test "tag-release workflow exists and calls the qte77/.github reusable" {
+  [ -f "$REPO_ROOT/.github/workflows/tag-release.yml" ]
+  grep -q "qte77/.github/.github/workflows/tag-release.yml@" \
+    "$REPO_ROOT/.github/workflows/tag-release.yml"
+}
+
+@test "publish-release workflow exists and calls the qte77/.github reusable" {
+  [ -f "$REPO_ROOT/.github/workflows/publish-release.yml" ]
+  grep -q "qte77/.github/.github/workflows/publish-release.yml@" \
+    "$REPO_ROOT/.github/workflows/publish-release.yml"
 }
 
 @test "codeql workflow exists" {
@@ -81,13 +94,6 @@ setup() {
 @test "integration workflow exists and uses local action" {
   [ -f "$REPO_ROOT/.github/workflows/integration.yaml" ]
   grep -q "uses: ./" "$REPO_ROOT/.github/workflows/integration.yaml"
-}
-
-# --- cleanup script ---
-
-@test "cleanup script exists and is executable" {
-  [ -f "$REPO_ROOT/.github/scripts/delete_branch_pr_tag.sh" ]
-  [ -x "$REPO_ROOT/.github/scripts/delete_branch_pr_tag.sh" ]
 }
 
 # --- bumpversion ---

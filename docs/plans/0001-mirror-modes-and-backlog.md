@@ -52,8 +52,12 @@ delete branches. **Decide-by-default:** every open choice below has a default; p
 
 ```bash
 TMPDIR=/tmp bats tests/unit/                       # test.yaml gate
-shellcheck scripts/*.sh .github/scripts/*.sh       # once A3 lands (same flags as the CI step)
-actionlint                                         # once A3 lands
+shellcheck scripts/*.sh                            # lint.yaml gate (A3, PR #47) — shellcheck ships
+                                                    # preinstalled on ubuntu-latest, no install needed;
+                                                    # .github/scripts/*.sh removed by PR #46 (A8), so
+                                                    # that glob is gone from both CI and local repro
+actionlint                                         # lint.yaml gate (A3, PR #47) — install locally first
+                                                    # (not preinstalled); see README Development
 # unset BOTH tokens — GH_TOKEN is invalid, GITHUB_TOKEN lacks write access to this repo;
 # only then does gh/git fall back to the keyring login with proper `repo` scope
 unset GH_TOKEN GITHUB_TOKEN; gh pr checks <n> --repo qte77/gha-github-mirror-action
@@ -65,8 +69,9 @@ unset GH_TOKEN GITHUB_TOKEN; rtk proxy gh pr checks <n> --repo qte77/gha-github-
 **Watch-outs:** hub pins `@v0` (nothing hub-side is live until B4 moves the tag; an unknown `with:`
 input on the old tag is reported to warn, not fail — treat as runner behaviour, not a docs citation,
 per F-list below) · secret names cannot start with `GITHUB_` (VERIFIED) → but a `GITHUB_`-prefixed
-key IS accepted as composite-step `env:` (file-verified: `action.yaml:34`, `bump-and-release.yaml:85`
-already do it) — the naming rule is about *secrets*, not step-env keys · `git push --mirror` into a
+key IS accepted as composite-step `env:` (file-verified: `action.yaml:34` does it; the second witness,
+`bump-and-release.yaml:85`, was retired by PR #46 — A8) — the naming rule is about *secrets*, not
+step-env keys · `git push --mirror` into a
 *non-empty* GitHub target force-updates/deletes refs and fails on protected branches/rulesets (exit
 2 — rejection behaviour itself is runner behaviour, not a fetched doc quote) · the plan link in
 issues #7–#11 (`~/.claude/plans/github-mirror-backup-research.md`) is dangling here — this repo plan
@@ -103,8 +108,8 @@ Design review surfaced two shipped bugs the arc fixes on the way: `::add-mask::`
 runner intact (emitted inside the scrubbed pipeline), and the hub passes PATs unconditionally while
 the script rejects PAT-without-URL.
 
-The arc also absorbs this session's backlog triage (dependabot grouping, two open bot PRs, issues
-#7–#11 / #33 / #36) so the repo has ONE plan and ONE remaining-work table.
+The arc also absorbs this session's backlog triage (dependabot grouping, two open bot PRs, issues #7–#11
+/ #33 / #36) so the repo has ONE plan and ONE remaining-work table.
 
 ## Source map (verified 2026-09-09 — three Explore agents + direct reads; line refs at HEAD `85aa1a6`)
 
@@ -113,23 +118,24 @@ The arc also absorbs this session's backlog triage (dependabot grouping, two ope
 | `action.yaml` (44 l) | Inputs `source_repo`, `gitlab_url/pat`, `codeberg_url/pat` (l.8-28). Step env l.33-41: `GITHUB_TOKEN: ''`, `GH_TOKEN: ${{ github.token }}` (**dead** — never read; keep, `test_infra_files.bats:22-24` asserts it), `SOURCE_REPO` default `${{ github.server_url }}/${{ github.repository }}.git`, `GITLAB_*`, `CODEBERG_*`; `run: ${{ github.action_path }}/scripts/mirror.sh`. |
 | `scripts/mirror.sh` (128 l) | `_main()` l.9; `set -uo pipefail` (no `-e`) l.12; pair validation l.21-51 (URL⇔PAT, ≥1 target; message "No target configured" l.49); `::add-mask::` l.58-61 **inside `_main` → scrubbed to `::add-mask::***` by l.123 (BUG)**; **clone without auth l.67**, exit 2 on failure l.68-70 **before cleanup (clone dir + URL-embedded creds left on disk)**; `push_mirror label url pat` l.77-94 — https-only inject `sed "s\|https://\|https://x:${pat}@\|"` l.81-83, output scrub l.87/90; hard-wired GitLab/Codeberg calls l.96-102; `rm -rf` l.105; exit 1=config 2=git; trailing whole-output scrub l.118-127 (`PIPESTATUS[0]`). |
 | `scripts/clone-local.sh` (75 l) | Local bare-mirror script; shares `repos.yaml` shape. Second shellcheck target. |
-| `tests/unit/test_mirror.bats` (14 tests) | `MIRROR_SH="$BATS_TEST_DIRNAME/../../scripts/mirror.sh"` l.5; `setup()` sets `TMPDIR`, git identity via `GIT_AUTHOR_*`/`GIT_COMMITTER_*` env vars (fixed by PR #40 — was `git config --global`), disables gpgsign for the test process, unsets config env; `teardown()` removes fixture dirs (added by PR #40). Pattern: seed local bare src (`git init --bare` + clone + empty commit + push), export env, `run "$MIRROR_SH"`, assert `$status`/`$output` with `[ ]`/`[[ ]]`+`\|\|`. Failure = nonexistent local path. Existing tests match substrings `*PAT*`/`*URL*`/`No target configured`/`gitlab`/`GitLab`. **https injection branch: zero coverage.** |
+| `tests/unit/test_mirror.bats` (13 tests — corrected at A4/PR #50; `bats` confirmed ok22-ok34) | `MIRROR_SH="$BATS_TEST_DIRNAME/../../scripts/mirror.sh"` l.5; `setup()` sets `TMPDIR`, git identity via `GIT_AUTHOR_*`/`GIT_COMMITTER_*` env vars (fixed by PR #40 — was `git config --global`), disables gpgsign for the test process, unsets config env; `teardown()` removes fixture dirs (added by PR #40). Pattern: seed local bare src (`git init --bare` + clone + empty commit + push), export env, `run "$MIRROR_SH"`, assert `$status`/`$output` with `[ ]`/`[[ ]]`+`\|\|`. Failure = nonexistent local path. Existing tests match substrings `*PAT*`/`*URL*`/`No target configured`/`gitlab`/`GitLab`. **https injection branch: zero coverage.** |
 | `tests/unit/test_clone_local.bats` | Same PR #40 fix applied to its `setup()`. Stub precedent: writes a PATH-prepended `$BATS_TEST_DIRNAME/_stubs/yq`, `teardown()` removes it; helper `_make_config`. |
 | `tests/unit/test_infra_files.bats` (17 tests) | grep meta-tests; asserts `GITHUB_TOKEN: ''` in action.yaml; asserts `source_repo` input. None break with the planned edits. |
-| `.github/workflows/test.yaml` (28 l) | `permissions: contents: read`; clone bats-core `--depth 1` → `sudo install.sh /usr/local` → `bats tests/unit/` with `TMPDIR: /tmp`. **A3 adds shellcheck/actionlint here.** |
+| `.github/workflows/test.yaml` (28 l) | `permissions: contents: read`; clone bats-core `--depth 1` → `sudo install.sh /usr/local` → `bats tests/unit/` with `TMPDIR: /tmp`. Unchanged by A3 — shellcheck/actionlint went to a new `lint.yaml` instead (cleaner separation of static analysis from the bats run). |
+| `.github/workflows/lint.yaml` (new, A3, PR #47) | Two jobs, same `push`/`pull_request: [main]` triggers, `permissions: contents: read`. `shellcheck`: no install step (0.9.0-1 ships preinstalled on `ubuntu-latest`, verified live). `actionlint`: installs via the project's own `download-actionlint.bash` pinned to tag `v1.7.12` (current stable, verified via `gh api repos/rhysd/actionlint/releases/latest`), not a marketplace action (smaller supply-chain surface); uses `steps.<id>.outputs.executable`. |
 | `.github/workflows/integration.yaml` (55 l) | `permissions: contents: read`; step `setup` seeds `/tmp/self-test-source` + `/tmp/self-test-target`; `uses: ./` with `source_repo`, `gitlab_url`=local path, `gitlab_pat: dummy-pat`; verify `rev-list --count --all ≥ 1`. **The test for YAML wiring — extend, never unit-test YAML.** |
 | `.github/workflows/mirror-all.yaml` (35 l) | Hub: cron `0 2 * * *` + `workflow_dispatch`; job `load` → `yq -o=json config/repos.yaml` → `outputs.matrix`; job `mirror` `if: != '[]'`, `fail-fast: false`, `uses: qte77/gha-github-mirror-action@v0` with `source_repo: ${{ matrix.repo.source }}`, `gitlab_url/pat`, `codeberg_url/pat` — **PATs passed unconditionally (BUG)**. **No `permissions:` block.** |
 | `config/repos.yaml` (8 l) | Header comment = schema (`source` GitHub, `gitlab`, `codeberg` optional) + example; body `[]`. |
 | `.github/workflows/codeql.yaml` | CodeQL `languages: actions`, cron Mon 06:00. |
 | `.github/workflows/lint-md-links.yml` | Reusable `qte77/.github/.github/workflows/lint-md-links.yml@5dfff1f…` — markdownlint-cli2 + lychee (`fail: true`), configs fetched from `qte77/.github` main. Docs PRs must pass it. |
-| `.github/workflows/bump-and-release.yaml` | `workflow_dispatch(bump_type)` → `callowayproject/bump-my-version` → signed commit on `bump-<run>-main` → tag `vX.Y.Z` → PR `[skip ci bump]` → release → force-move floating `vX`. **Only path by which hub `@v0` sees new inputs.** |
+| `.github/workflows/bump-version.yml`, `tag-release.yml`, `publish-release.yml` (A8, PR #46) | Thin `uses:` callers onto `qte77/.github`'s reusable release workflows, pinned `@4801217a` (main @ 2026-09-09), replacing the retired `bump-and-release.yaml`. `bump-version.yml`: `workflow_dispatch(bump_type)`, pins `bump_my_version_pin: "1.5.1"`. `tag-release.yml`: `push` to `main` on `pyproject.toml`, defaults unchanged. `publish-release.yml`: `workflow_dispatch(tag)` → publish job + a caller-local `float-major-tag` job (`needs: publish`) that force-moves floating `v0` — **the reusable itself doesn't do this; only path by which hub `@v0` sees new releases.** Three separate triggers now, not one dispatch — see B4. Not yet exercised by a real dispatch. |
 | `.github/dependabot.yml` | `github-actions`, `/`, weekly, no `groups:` (7 PRs all-time; `bump-my-version` alone caused 3 cycles in 7 weeks). |
 | `README.md` (99 l) | Usage per-repo (`@v1` — no such tag; use `@v0`) / hub / local; "What it does" (**"Masks all PATs in CI logs" is false today**); Inputs table; Development `bats tests/unit/`; **badge says MIT, §License + LICENSE say Apache-2.0**; badge version `0.1.0`. |
 | `CHANGELOG.md` (26 l) | Keep-a-Changelog; only `## [Unreleased]` → `### Added`, then `---`. Test counts stale (says 16+13; actual 17+14). |
 | `pyproject.toml` | `[project] version = "0.1.0"`, `[tool.bumpversion]` files: pyproject, README badge, CHANGELOG (search `## [Unreleased]\n\n---`). |
 | `.claude/settings.json` | Plugins `commit-helper`, `tdd-core`, `gha-dev`, `docs-governance`; no hooks/rules. `settings.local.json` (ignored) allows only `uv …`. |
 | `.gitmessage`, `.github/pull_request_template.md` | Conventional Commits (`type(scope): …`); PR template = Summary + Test plan (`bats tests/unit/` local, CI). |
-| Absent | `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, `AGENT_LEARNINGS.md`, Makefile, shellcheck/actionlint/yamllint, `changelog.d/`, `tests/integration/`. |
+| Absent | `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, `AGENT_LEARNINGS.md`, Makefile, yamllint, `changelog.d/`, `tests/integration/`. (shellcheck/actionlint added by A3, PR #47.) |
 
 **External refs:** PRs #38 (`github/codeql-action` 4→4.37.4), #39 (`callowayproject/bump-my-version`
 1.4.1→1.5.1) — dependabot, 8/8 checks green, `CLEAN`. Issues #7 GitLab acct, #8 Codeberg acct, #9
@@ -141,8 +147,8 @@ workflows (blocked on qte77/.github#33). Labels: `enhancement`, `documentation`,
 **Verified vendor facts (docs.github.com, fetched 2026-09-09):** secret names "Must not start with
 the `GITHUB_` prefix", alphanumeric/`_` only, no leading digit, case-insensitive. Dereferencing a
 nonexistent context property "will evaluate to an empty string". Falsy values are exactly
-`false, 0, -0, "", '', null`. Dynamic `secrets[<expr>]` indexing is reported unsupported (community
-#25171 accepted answer) — not relied on.
+`false, 0, -0, "", '', null`. Dynamic `secrets[<expr>]` indexing is reported unsupported
+(community #25171 accepted answer) — not relied on.
 
 **Explicitly NOT vendor-documented — cite as runner-observed behaviour in any issue/PR body, never
 as "per the docs" (per the project's claim-verification rule):** (1) that `&&`/`||` return an
@@ -155,9 +161,13 @@ username (`x`) for GitHub/GitLab/Codeberg, and whether `x-access-token` specific
 GitHub installation tokens — **verify at A4 via the `integration.yaml` `github.token` step**; (5)
 exact PAT charsets per host; (6) `git --mirror` force/prune semantics, `GIT_TRACE_REDACT` default,
 credential-helper "approve" behaviour on URL-sourced creds; (7) GitHub owner/repo case-insensitivity,
-protected-branch/ruleset rejection of a force-push; (8) whether `shellcheck`/`yq` are preinstalled on
-`ubuntu-latest`, and any `actionlint`/`zizmor` pinned version — **A3 fetches current facts, doesn't
-guess.**
+protected-branch/ruleset rejection of a force-push; (8) ~~whether `shellcheck`/`yq` are preinstalled on
+`ubuntu-latest`, and any `actionlint`/`zizmor` pinned version — A3 fetches current facts, doesn't
+guess.~~ **RESOLVED by A3 (PR #47), fetched live, not guessed:** `shellcheck` `0.9.0-1` and `yq`
+`4.53.6` ship preinstalled on `ubuntu-latest` (verified against `actions/runner-images` `main`
+manifest); `ubuntu-latest` currently maps to Ubuntu 24.04 (same repo's root README); `actionlint` is
+**not** preinstalled and current stable is tag `v1.7.12` (verified via `gh api
+repos/rhysd/actionlint/releases/latest`). `zizmor` was not added — out of A3's scope, not requested.
 
 ## Approach
 
@@ -182,9 +192,11 @@ external source, close issues.
 - **Source auth.** Build `clone_url` from `SOURCE_REPO`; inject `x:${SOURCE_PAT}@` only when the
   URL is `https://*` AND `SOURCE_PAT` non-empty (same `sed` as l.82); never overwrite `SOURCE_REPO`
   (log lines stay clean). Clone stderr is covered by the trailing scrub (extend `_sed_expr`) — no
-  second inline `sed`. Username stays `x` for all hosts (today's convention); if the `github.token`
-  integration step (below) returns 401, switch the *clone* username to `x-access-token` (GitHub's
-  documented form for installation tokens; any username works for PATs) — one string, record here.
+  second inline `sed`. **RESOLVED at A4 (PR #50), confirmed green in CI:** username stays `x` for
+  all hosts, including `github.token`-authenticated self-source clones — the `github.token
+  self-source proof` integration step cloned this repo's own live URL via `https://x:${{
+  github.token }}@github.com/...` and succeeded (target ended with the repo's full commit history,
+  not a silent no-op); no switch to `x-access-token` was needed.
 - **Self-clobber guard** in the validation block, before clone, only when `GITHUB_ACTIONS` and
   `GITHUB_REPOSITORY` are set: for each of the three target URLs, strip `.git`/trailing `/`,
   lowercase (`${u,,}`, bash ≥4), and compare to `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}`
@@ -201,8 +213,17 @@ external source, close issues.
   new ones) at top level, *before* the `_main | sed` pipeline, when `GITHUB_ACTIONS` is set. Only
   there does the runner see the real value.
 - **Credential hardening (from security review, file/reasoning-verified, all within A4's diff):**
-  (a) validate every configured PAT against `^[A-Za-z0-9_-]+$` before use, `exit 1` on a bad one —
-  turns "the sed/URL is safe because real PAT charsets happen not to collide" into safe-by-construction;
+  (a) validate every configured PAT against `^[A-Za-z0-9_.-]+$` before use, `exit 1` on a bad one —
+  turns "the sed/URL is safe because real PAT charsets happen not to collide" into safe-by-construction.
+  **Amended at A4 (PR #50):** the initial regex was `^[A-Za-z0-9_-]+$` (no dot); this PR's own CI
+  caught it rejecting the real `github.token` value with "SOURCE_PAT contains invalid characters".
+  Verified at source (github.blog changelog 2026-04-24 + docs.github.com/.../github_token): GitHub
+  App installation tokens (incl. `GITHUB_TOKEN`/`github.token`) are rolling out a `ghs_APPID_JWT`
+  format — a JWT, which uses `.` as a segment separator — and GitHub explicitly recommends against
+  hardcoded token-pattern validation. This guard exists for *our* URL/argv injection safety, not to
+  mirror GitHub's issuance format, and `.` is safe in both contexts, so the charset widened to
+  `[A-Za-z0-9_.-]` rather than being dropped (RED-then-GREEN regression test added: "accepts a PAT
+  containing dots (JWT-format installation tokens)");
   (b) build the injected URL by string substitution, not `sed`, and scrub captured command output
   with bash `${var//"$pat"/***}` (quoting `"$pat"` forces a literal, non-glob match) instead of piping
   through a separate `sed` process — removes the PAT from that process's argv (visible via `ps`/`/proc`
@@ -237,7 +258,13 @@ external source, close issues.
   read scope if it'll be a source too") — simpler than minting six separate least-privilege secrets
   (3 write-only target + 3 read-only source), at the cost of one PAT per host doing double duty.
   Deferred hardening, not done now: split into per-direction secrets (`SOURCE_PAT_GITLAB` etc.) if
-  least-privilege separation is ever required. `repos.yaml` gains only an optional `github` field.
+  least-privilege separation is ever required. **Hub limitation from this reuse:** it assumes source
+  and target on the same host share one account — a same-host cross-account router (e.g. GitLab
+  account A → GitLab account B) can't work through the hub with a single `GITLAB_PAT`, since a
+  write-scoped target credential presented back to the source host would be for the wrong account.
+  The per-repo marketplace action (not the hub) already covers that case via its own `source_pat`
+  input, so nothing is blocked — just don't expect the hub's `repos.yaml` schema to support it.
+  `repos.yaml` gains only an optional `github` field.
   `permissions: contents: read` added. Fallback if the ternary idiom fails the A5 syntax check: one
   `SOURCE_PAT` secret for all entries.
 - **Tests.** `mirror.sh` is a module → RED bats tests (table below). YAML wiring → `integration.yaml`
@@ -305,7 +332,7 @@ Existing test "PAT not visible in error output" stays valid because `setup()` un
 | Slice / branch | Owns (exclusive) | Depends on |
 |---|---|---|
 | A2 `chore/dependabot-groups` | `.github/dependabot.yml` | — |
-| A3 `ci/shellcheck-actionlint` | `.github/workflows/test.yaml` (or new `lint.yaml`), `.github/scripts/*.sh`, minimal quoting fixes in `scripts/*.sh` | — (merges before A4; A4 rebases) |
+| A3 `ci/shellcheck-actionlint` | `.github/workflows/lint.yaml` (new), minimal shellcheck-driven fixes in `scripts/mirror.sh` (`\|\| exit 2` guard + 2 inline disable comments), README Development | — planned to merge before A4/A8; **A8 actually merged first (see remaining-work row) — PR #47 open, CI dispatch unconfirmed on the tip commit, verify before merge** |
 | A4 `feat/source-pat-github-target` | `scripts/mirror.sh`, `tests/unit/test_mirror.bats`, `action.yaml`, `.github/workflows/integration.yaml`, README **Inputs rows only** | none for code; rebases onto A3 |
 | A5 `feat/hub-github-target` | `.github/workflows/mirror-all.yaml`, `config/repos.yaml` header | rebases onto A4 before its dispatch check |
 | A6 `docs/mirror-modes` | README **Usage → Modes** + masking claim + badges/pin, `CHANGELOG.md`, `pyproject.toml` bumpversion search (if the dry-run needs it) | merges after A4 (docs describe shipped inputs) |
@@ -324,19 +351,19 @@ Strike the row in the PR that ships it; append `— PR #n`.
 | ID | Item | Gate | Branch / where | Done-when |
 |---|---|---|---|---|
 | P0 | Unattended-run prerequisite: shell works without permission prompts; before running any unfamiliar test suite's setup/fixture code, read it for side effects on shared/global state first | agent | local | **DONE — PR #40** |
-| A0 | Materialize this plan; file tracking issue; write the issue # into Status | agent | main thread, `docs/arc-0001-plan` | **DONE — issue #41, PR TBD** |
+| A0 | Materialize this plan; file tracking issue; write the issue # into Status | agent | main thread, `docs/arc-0001-plan` | **DONE — issue #41, PR #42** |
 | A1 | Squash-merge dependabot PRs #38, #39 | agent (authorized by plan approval) | main thread | |
-| A2 | Dependabot `groups:` — one weekly group `github-actions-minor-patch` (`applies-to: version-updates`, `update-types: [minor, patch]`, `patterns: ["*"]`); majors stay ungrouped; default `open-pull-requests-limit` | agent | `chore/dependabot-groups` | PR merged; next dependabot run opens ≤1 grouped PR (observe once) |
-| A3 | Add shellcheck + actionlint to CI. Prefer no marketplace-action pin where a direct install works (smaller supply-chain surface): `sudo apt-get install -y shellcheck` if not already preinstalled on `ubuntu-latest` (fetch/confirm live) and `actionlint` via its official install script or a pinned `docker run rhysd/actionlint:<tag>` (fetch current tag live — **UNVERIFIED until fetched**, don't guess a version); fix findings in `scripts/*.sh`, `.github/scripts/*.sh` — expect at least `cd "$CLONE_DIR"` without `\|\| exit` (SC2164) at mirror.sh:71 (moot once A4's `trap` lands — sequence A3 first, then A4 rebases and re-checks); README Development lists the local commands | agent | `ci/shellcheck-actionlint` | new CI steps green on the PR; `shellcheck`/`actionlint` clean locally |
-| A4 | Feature core: RED tests 1-10 → GREEN changes (both tables above): `source_pat`, `github_url`/`github_pat`, PAT charset validation, self-clobber guard (https-form only), add-mask fix, argv-safe scrub, disk-residue scrub (`remote set-url`), `trap` cleanup, `credential.helper=`; `action.yaml` inputs/env; `integration.yaml` steps 2-4; README Inputs rows | agent | `feat/source-pat-github-target` | tests 1-10 RED then GREEN; 14 existing green; `TMPDIR=/tmp bats tests/unit/` + shellcheck clean; integration job shows steps 1-4 green (or the `x-access-token` decision recorded); PR merged |
+| A2 | Dependabot `groups:` — one weekly group `github-actions-minor-patch` (`applies-to: version-updates`, `update-types: [minor, patch]`, `patterns: ["*"]`); majors stay ungrouped; default `open-pull-requests-limit` | agent | `chore/dependabot-groups` | **SHIPPED — PR #44**; confirmed working — first grouped run opened a single PR #45 (`github/codeql-action` 4.37.4→4.37.9) |
+| A3 | Add shellcheck + actionlint to CI. Prefer no marketplace-action pin where a direct install works (smaller supply-chain surface): `sudo apt-get install -y shellcheck` if not already preinstalled on `ubuntu-latest` (fetch/confirm live) and `actionlint` via its official install script or a pinned `docker run rhysd/actionlint:<tag>` (fetch current tag live — **UNVERIFIED until fetched**, don't guess a version); fix findings in `scripts/*.sh`, `.github/scripts/*.sh` — expect at least `cd "$CLONE_DIR"` without `\|\| exit` (SC2164) at mirror.sh:71 (moot once A4's `trap` lands — sequence A3 first, then A4 rebases and re-checks); README Development lists the local commands | agent | `ci/shellcheck-actionlint` | **SHIPPED — PR #47.** `shellcheck` preinstalled (`0.9.0-1`), no install step; `actionlint` installed via its own download script pinned to `v1.7.12` (current stable, fetched via `gh api`). SC2164 at mirror.sh:71 was superseded by A4's `git -C` rewrite (no `cd` left to guard) — resolved on rebase onto A4 by taking A4's version; the two SC2001 disable-comments A3 added on the old sed-based PAT lines are likewise gone. A3's "merges before A4/A8" assumption did not hold (A8 merged first, removing `.github/scripts/`); A3 reacted by nullglob-guarding the shellcheck target array so the step is correct regardless of merge order. A3 also flagged that GitHub Actions never dispatched a check-suite for 3 of its follow-up commits (confirmed via the Checks API, not just CLI caching) — re-verified CI fresh on the rebased tip before merging, see Status. |
+| A4 | Feature core: RED tests 1-10 → GREEN changes (both tables above): `source_pat`, `github_url`/`github_pat`, PAT charset validation, self-clobber guard (https-form only), add-mask fix, argv-safe scrub, disk-residue scrub (`remote set-url`), `trap` cleanup, `credential.helper=`; `action.yaml` inputs/env; `integration.yaml` steps 2-4; README Inputs rows | agent | `feat/source-pat-github-target` | **SHIPPED — PR #50.** Tests 1-10 RED then GREEN (all confirmed individually); 13 pre-existing tests green unmodified (source map's "14" was a plan miscount, corrected above); `TMPDIR=/tmp bats tests/unit/`: 45/45 green (10 plan tests + 1 mid-PR regression test for a charset-guard bug the PR's own CI caught — see Credential hardening amendment above); shellcheck + actionlint clean; integration job's 4 `uses: ./` steps all green, including the `x-access-token` decision (RESOLVED: `x` works, see Design decisions) and the self-clobber negative proof |
 | A5 | Hub wiring: gate all three PATs on their URLs (fixes shipped bug), host-derived `source_pat` reusing the same three secrets, `github_url: ${{ matrix.repo.github }}`, `permissions: contents: read`; `repos.yaml` header documents `github`. **Syntax proof before merge:** on the branch, temporarily swap `uses: …@v0` → `actions/checkout@v6` + `uses: ./`, two dummy entries in `repos.yaml`, `unset GH_TOKEN GITHUB_TOKEN; gh workflow run mirror-all.yaml --ref <branch>`; reaching `mirror.sh`'s config error / clone failure proves both expressions parsed; revert swap + config before merge | agent | `feat/hub-github-target` | `actionlint` clean; branch dispatch reached `mirror.sh` (run URL in PR); `yq -o=json config/repos.yaml` is `[]` again; PR merged (dormant until B3/B4) |
-| A6 | README "Modes" section (push / invert / router — one `@v0` YAML example each; "GitHub target must pre-exist and be unprotected; `--mirror` force-updates refs"; note the guard is https-form only); README masking claim made true; badge MIT→Apache-2.0; usage pin `@v1`→ the tag that exists (`git ls-remote --tags origin`); repos.yaml is a trust boundary (see Watch-outs) noted in README/CONTRIBUTING; CHANGELOG `[Unreleased]` `### Added` (3 inputs, guard, hub `github` field, lint gates, dependabot groups) + `### Fixed` (add-mask, hub PAT gating, credential-on-disk residue) + drop stale test counts; **pre-stage B4**: `uv run bump-my-version bump minor --dry-run --verbose` — fix CHANGELOG shape or `pyproject.toml` search pattern until exit 0 | agent | `docs/mirror-modes` | lint-md-links green; dry-run exit 0 (output pasted in PR); PR merged |
-| A7 | Issue #33 README canon: apply the itemized checklist from the #33 comment (badge order/colour, section renames, Why/Refs, Development → `CONTRIBUTING.md`) | data → agent | `docs/readme-canon-33` | canon final (qte77/qte77#124 + #126 closed/merged via `gh issue view`); every checklist item ticked; #33 closed by PR — **DONE — PR #49** (Inputs table kept inline as a judgment call, see PR body; MIT badge, `@v1` pin, and masking claim left for A6) |
-| A8 | Issue #36: thin `uses:` callers for `qte77/.github` bump/tag/publish reusable workflows | data → agent | `ci/reusable-release-36` | qte77/.github#33 merged (re-poll `gh pr view 33 --repo qte77/.github` at each arc touchpoint); callers added; `bump-and-release.yaml` retired or delegated; #36 closed |
+| A6 | README "Modes" section (push / invert / router — one `@v0` YAML example each; "GitHub target must pre-exist and be unprotected; `--mirror` force-updates refs"; note the guard is https-form only); README masking claim made true; badge MIT→Apache-2.0; usage pin `@v1`→ the tag that exists (`git ls-remote --tags origin`); repos.yaml is a trust boundary (see Watch-outs) noted in README/CONTRIBUTING; CHANGELOG `[Unreleased]` `### Added` (3 inputs, guard, hub `github` field, lint gates, dependabot groups) + `### Fixed` (add-mask, hub PAT gating, credential-on-disk residue) + drop stale test counts; **pre-stage B4**: `uv run bump-my-version bump minor --dry-run --verbose` — fix CHANGELOG shape or `pyproject.toml` search pattern until exit 0 | agent | `docs/mirror-modes` | **SHIPPED — PR #48**; lint-md-links green; dry-run exit 0 (output pasted in PR) |
+| A7 | Issue #33 README canon: apply the itemized checklist from the #33 comment (badge order/colour, section renames, Why/Refs, Development → `CONTRIBUTING.md`) | data → agent | `docs/readme-canon-33` | canon final (qte77/qte77#124 + #126 closed/merged via `gh issue view`); every checklist item ticked; #33 closed by PR — **DONE — PR #49** (Inputs table kept inline as a judgment call, see PR body; MIT badge, `@v1` pin, and masking claim done by A6, PR #48) |
+| A8 | Issue #36: thin `uses:` callers for `qte77/.github` bump/tag/publish reusable workflows | data → agent | `ci/reusable-release-36` | **SHIPPED — PR #46, closes #36.** `bump-and-release.yaml` + `.github/scripts/delete_branch_pr_tag.sh` retired; `bump-version.yml`/`tag-release.yml`/`publish-release.yml` added, pinned `@4801217a`; `float-major-tag` job added since no `qte77/.github` reusable floats `v0`; `actionlint` clean, 35/35 bats green. Real dispatch (not yet done) deferred to B4. |
 | B1 | #7 GitLab account `qte77` + PAT (`write_repository`; add `read_repository` too since this same PAT doubles as the source credential when GitLab is a *source* — see the accepted single-secret-per-host tradeoff in Design decisions) | owner | gitlab.com | PAT value handed to B3 |
 | B2 | #8 Codeberg account `qte77` + PAT (repo write; read too, same reason as B1) | owner | codeberg.org | PAT value handed to B3 |
 | B3 | #9 secrets: `GITLAB_PAT`, `CODEBERG_PAT`, **`GH_TARGET_PAT`** (fine-grained GitHub PAT, `contents: read+write` on the target repos only) — three secrets total, each doing double duty as source-read + target-write credential for its host | owner (values) → agent (`unset GH_TOKEN GITHUB_TOKEN; gh secret set NAME --repo qte77/gha-github-mirror-action`) | GitHub repo settings | `gh secret list` shows all three |
-| B4 | Release so the hub's `@v0` sees the new inputs: dispatch `bump-and-release` with `minor` (0.1.0 → 0.2.0); pre-staged by A6's dry-run → pure "go" | owner-approve → agent (`unset GH_TOKEN GITHUB_TOKEN; gh workflow run bump-and-release.yaml -f bump_type=minor`) | GitHub Actions | tag `v0.2.0` exists, floating `v0` moved, release published |
+| B4 | Release so the hub's `@v0` sees the new inputs (0.1.0 → 0.2.0). **Since PR #46 (A8), no longer a single dispatch** — now three steps through the new reusable-workflow callers: (1) `unset GH_TOKEN GITHUB_TOKEN; gh workflow run bump-version.yml -f bump_type=minor`, (2) merge the PR it opens onto `main`, (3) `tag-release.yml` fires automatically on that push and creates `v0.2.0`, (4) `unset GH_TOKEN GITHUB_TOKEN; gh workflow run publish-release.yml` to publish the Release and float `v0`. Pre-staged by A6's dry-run → pure "go", but this is also the first real dispatch of the new mechanism (A8 was wiring-only) — treat it as a live test, not assumed-safe. | owner-approve → agent | GitHub Actions | tag `v0.2.0` exists, floating `v0` moved, release published |
 | C1 | #10 single-repo hub test: one entry in `repos.yaml`, `gh workflow run mirror-all.yaml`, verify refs on GitLab/Codeberg | agent (after B1–B4) | `main` via PR | `git ls-remote` on both targets lists all source refs; run log shows `***`/masked, never a PAT |
 | C2 | #11 full rollout: populate `repos.yaml` from `gh repo list qte77` (public first), dispatch, spot-check 3 repos | agent | PR + dispatch | hub run green for every matrix entry |
 | C3 | Invert e2e: one entry with a GitLab/Codeberg *source* and a pre-created GitHub `github` target; dispatch; verify. (The self-clobber negative test already ran in A4/CI against the hub repo itself — no need to repeat it here against a real external source.) | data (external source repo + `GH_TARGET_PAT`) → agent | PR + dispatch | GitHub target has the source's refs |
