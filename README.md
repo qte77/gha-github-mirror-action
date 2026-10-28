@@ -2,21 +2,25 @@
 
 Mirror GitHub repositories to GitLab and/or Codeberg. All branches, tags, and refs.
 
-![Version](https://img.shields.io/badge/version-0.1.0-8A2BE2)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue)](CHANGELOG.md)
 [![mirror-all](https://github.com/qte77/gha-github-mirror-action/actions/workflows/mirror-all.yaml/badge.svg)](https://github.com/qte77/gha-github-mirror-action/actions/workflows/mirror-all.yaml)
 [![BATS](https://github.com/qte77/gha-github-mirror-action/actions/workflows/test.yaml/badge.svg)](https://github.com/qte77/gha-github-mirror-action/actions/workflows/test.yaml)
 [![CodeFactor](https://www.codefactor.io/repository/github/qte77/gha-github-mirror-action/badge)](https://www.codefactor.io/repository/github/qte77/gha-github-mirror-action)
 [![CodeQL](https://github.com/qte77/gha-github-mirror-action/actions/workflows/codeql.yaml/badge.svg)](https://github.com/qte77/gha-github-mirror-action/actions/workflows/codeql.yaml)
 [![Dependabot](https://github.com/qte77/gha-github-mirror-action/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/qte77/gha-github-mirror-action/actions/workflows/dependabot/dependabot-updates)
 
-**Multi-mode**: marketplace action for a single repo, central hub mirroring many on a schedule, or local script for offline backups.
+## What
 
-For version history have a look at the [CHANGELOG](CHANGELOG.md).
+- Runs as a marketplace action for a single repo, a central hub mirroring many repos on a schedule, or a local script for offline backups
+- Validates that at least one target (URL + PAT pair) is configured
+- Masks every configured PAT in CI logs via GitHub's `::add-mask::`, emitted before any output
+- Clones the source repository as a bare repo, optionally authenticated via `source_pat`
+- Pushes `--mirror` to each configured target (GitLab, Codeberg, and/or GitHub)
+- Scrubs captured output as a defense-in-depth measure, and clears the credentialed URL from the clone's on-disk git config
+- Cleans up the temporary clone directory
 
-## Usage
-
-### Per-repo (marketplace action)
+## How
 
 ```yaml
 name: Mirror
@@ -36,7 +40,7 @@ jobs:
 ### Modes
 
 The action supports three mirroring shapes, chosen by which inputs are set. All three share the same
-`push --mirror` mechanics (see [What it does](#what-it-does)) — only the source and target change.
+`push --mirror` mechanics (see [What](#what)) — only the source and target change.
 
 **Push** (default, shown above) — mirror the current repo out to GitLab and/or Codeberg. No source
 credential needed for a public source; GitHub is read without a PAT.
@@ -78,49 +82,7 @@ GitHub target:
 - [`config/repos.yaml`](config/repos.yaml) is a **trust boundary**: anyone who can merge a change to
   it can point any configured PAT at any URL listed as a `source`.
 
-### Central hub (schedule + dispatch)
-
-The repo includes a `mirror-all.yaml` workflow that reads `config/repos.yaml` and mirrors all listed repos via matrix jobs.
-
-### Local clone (script-only)
-
-Mirror GitHub repos to a local directory using just `scripts/clone-local.sh` — no GitHub Actions, no PATs, no GitLab/Codeberg. Bare `--mirror` clones; idempotent re-runs (auto-prune deletions on subsequent fetches).
-
-```bash
-# All public repos for an owner
-OWNER=qte77 ./scripts/clone-local.sh
-
-# Subset from a curated list (same shape as config/repos.yaml)
-CONFIG=config/repos.yaml ./scripts/clone-local.sh
-
-# Custom destination (default: ./mirrors)
-OWNER=qte77 DEST=~/backups/github ./scripts/clone-local.sh
-
-# Show usage
-./scripts/clone-local.sh --help
-```
-
-| Env var | Default | Purpose |
-|---|---|---|
-| `OWNER` | unset | GitHub user/org → `gh repo list` (mutually exclusive with `CONFIG`) |
-| `CONFIG` | `config/repos.yaml` | Curated YAML list (when `OWNER` is unset) |
-| `DEST` | `./mirrors` | Local directory for the bare repo clones |
-| `VISIBILITY` | unset | Pass-through to `gh repo list --visibility` |
-| `LIMIT` | `1000` | Pass-through to `gh repo list --limit` |
-
-Requires `git` and `gh` (authenticated for private repos).
-
-## What it does
-
-1. Validates that at least one target (URL + PAT pair) is configured
-2. Masks every configured PAT in CI logs via GitHub's `::add-mask::`, emitted before any output
-3. Clones the source repository as a bare repo (optionally authenticated via `source_pat`)
-4. Pushes `--mirror` to each configured target (GitLab, Codeberg, and/or GitHub)
-5. Scrubs captured command output as a defense-in-depth measure, and clears the credentialed URL
-   from the clone's on-disk git config
-6. Cleans up the temporary clone directory
-
-## Inputs
+### Inputs
 
 | Name | Required | Default | Description |
 |------|----------|---------|-------------|
@@ -133,22 +95,23 @@ Requires `git` and `gh` (authenticated for private repos).
 | `github_url` | No | | Target GitHub repo HTTPS URL; must not be the repo running the action |
 | `github_pat` | No | | GitHub PAT for the target repo (`contents: read+write` scope) |
 
-At least one target (URL + PAT pair) must be configured.
+At least one target (URL + PAT pair) must be configured. For central-hub scheduling across many
+repos and the local-clone script (no GitHub Actions, no PATs required), see
+[docs/usage.md](docs/usage.md).
 
-## Development
+## Why
 
-```bash
-# Run tests
-bats tests/unit/
+A `git clone --mirror` + cron script uses the same git primitives but needs its own always-on
+host, secret storage, and someone to notice when it silently stops. This action runs inside GitHub
+Actions you already have: PATs live in encrypted secrets, a failed run is a red check, and one
+workflow mirrors a single repo or fans out to many from a scheduled hub — no separate
+infrastructure.
 
-# Lint shell scripts (shellcheck ships preinstalled on ubuntu-latest CI runners;
-# nullglob so this still works if .github/scripts/ doesn't exist)
-shopt -s nullglob; targets=(scripts/*.sh .github/scripts/*.sh); shellcheck "${targets[@]}"
+## Refs
 
-# Lint workflow files (actionlint is not preinstalled; install locally first, e.g.
-# via https://github.com/rhysd/actionlint/blob/main/docs/install.md)
-actionlint
-```
+- [CHANGELOG](CHANGELOG.md)
+- [CONTRIBUTING](CONTRIBUTING.md)
+- [Usage details](docs/usage.md)
 
 ## License
 
