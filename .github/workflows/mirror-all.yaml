@@ -15,7 +15,7 @@ jobs:
     outputs:
       matrix: ${{ steps.cfg.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
       - id: cfg
         run: echo "matrix=$(yq -o=json config/repos.yaml)" >> "$GITHUB_OUTPUT"
 
@@ -28,7 +28,7 @@ jobs:
         repo: ${{ fromJson(needs.load.outputs.matrix) }}
       fail-fast: false
     steps:
-      - uses: qte77/gha-github-mirror-action@v0
+      - uses: qte77/gha-github-mirror-action@1e93398fcac45b9b9672fd0cf7cb3be2e2dac075  # v0
         with:
           source_repo: ${{ matrix.repo.source }}
           gitlab_url: ${{ matrix.repo.gitlab }}
