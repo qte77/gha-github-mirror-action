@@ -64,6 +64,15 @@ setup() {
   grep -q "schedule" "$REPO_ROOT/.github/workflows/mirror-all.yaml"
 }
 
+@test "mirror-all workflow declares explicit top-level permissions" {
+  # Reason: CodeQL actions/missing-workflow-permissions (alerts #2, #3) — both
+  # jobs inherited the default read-write GITHUB_TOKEN. Neither job needs more
+  # than read (load: checkout+yq; mirror: read-only clone via GH_TOKEN).
+  grep -q "^permissions:" "$REPO_ROOT/.github/workflows/mirror-all.yaml"
+  grep -A1 "^permissions:" "$REPO_ROOT/.github/workflows/mirror-all.yaml" \
+    | grep -q "contents: read"
+}
+
 @test "bump-version workflow exists and calls the qte77/.github reusable" {
   [ -f "$REPO_ROOT/.github/workflows/bump-version.yml" ]
   grep -q "qte77/.github/.github/workflows/bump-version.yml@" \

@@ -11,6 +11,10 @@ Types of changes:
 
 ## [Unreleased]
 
+### Security
+
+- `mirror-all.yaml`: add explicit top-level `permissions: contents: read` — neither `load` nor `mirror` needs more than read, but both previously inherited the default read-write `GITHUB_TOKEN` (CodeQL `actions/missing-workflow-permissions`, alerts #2/#3).
+
 ### Changed
 
 - Release mechanism: `bump-and-release.yaml` replaced by thin `uses:` callers (`bump-version.yml`, `tag-release.yml`, `publish-release.yml`) onto the `qte77/.github` reusable release workflows.
