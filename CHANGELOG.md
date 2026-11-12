@@ -14,6 +14,8 @@ Types of changes:
 ### Security
 
 - `mirror-all.yaml`: add explicit top-level `permissions: contents: read` — neither `load` nor `mirror` needs more than read, but both previously inherited the default read-write `GITHUB_TOKEN` (CodeQL `actions/missing-workflow-permissions`, alerts #2/#3).
+- Pin every tag-referenced `uses:` in this repo's own workflows to the commit SHA of the tag in use, per this repo's Actions policy (full-SHA pins required): `actions/checkout@v7`, `github/codeql-action/init@v4.39.1`, `github/codeql-action/analyze@v4.39.1`, and the repo's own self-reference `qte77/gha-github-mirror-action@v0` in `mirror-all.yaml`. `action.yaml` has no `uses:` steps (single shell step) so nothing changed there. No version changes.
+- `.github/dependabot.yml`: restructure `github-actions` groups into `github-codeql-action` (own-cadence updates), `actions-security-updates` (ungrouped security bumps land fast), and `actions-version-updates` (minor/patch only; majors stay separate PRs), replacing the single `github-actions-minor-patch` group.
 
 ### Changed
 
@@ -32,7 +34,7 @@ Types of changes:
 - Self-clobber guard: refuses to mirror into the repo running the action (HTTPS-form targets only)
 - Hub: `github` field in `config/repos.yaml`/`mirror-all.yaml` matrix, gating all three PATs on their matching URL being set
 - shellcheck + actionlint CI checks for `scripts/*.sh` and `.github/scripts/*.sh`
-- Dependabot `groups:` — weekly `github-actions-minor-patch` group for minor/patch updates
+- Dependabot `groups:` — weekly `github-actions-minor-patch` group for minor/patch updates (since restructured; see Security)
 - `lint-docs.yml`: supplementary markdownlint check for `docs/**/*.md`, closing a coverage gap in the shared reusable lint workflow (its `markdownlint-cli2-action` defaults to root-level files only)
 
 ### Fixed
