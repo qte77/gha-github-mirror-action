@@ -1,7 +1,13 @@
 # Repos to mirror via central hub (mirror-all.yaml).
-# Each entry: source (GitHub), gitlab (optional), codeberg (optional).
-# Example:
+# Each entry: source (required, any HTTPS host) and at least one target: gitlab, codeberg and/or
+# github. A github target must already exist and must not be the hub repo itself.
+# The source is read with the PAT of its host (GITLAB_PAT, CODEBERG_PAT or GH_TARGET_PAT), so a
+# private source needs that PAT to have read access to it.
+# Push example (back up a GitHub repo):
 # - source: https://github.com/qte77/Agents-eval.git
 #   gitlab: https://gitlab.com/qte77/Agents-eval.git
 #   codeberg: https://codeberg.org/qte77/Agents-eval.git
+# Pull example (mirror into GitHub):
+# - source: https://gitlab.com/qte77/some-repo.git
+#   github: https://github.com/qte77/some-repo-mirror.git
 []
