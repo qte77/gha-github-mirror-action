@@ -30,8 +30,7 @@ jobs:
         repo: ${{ fromJson(needs.load.outputs.matrix) }}
       fail-fast: false
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7  TEMP dispatch proof
-      - uses: ./  # TEMP dispatch proof
+      - uses: qte77/gha-github-mirror-action@1e93398fcac45b9b9672fd0cf7cb3be2e2dac075  # v0
         # Reason: pass each PAT only when its URL is set (mirror.sh rejects a PAT without its URL).
         # Keep the `''` fallbacks: a non-empty one would hide a missing secret from mirror.sh's
         # URL/PAT pairing check. The source is read with the PAT of its host.

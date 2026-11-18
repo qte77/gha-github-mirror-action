@@ -10,8 +10,4 @@
 # Pull example (mirror into GitHub):
 # - source: https://gitlab.com/qte77/some-repo.git
 #   github: https://github.com/qte77/some-repo-mirror.git
-# TEMP dispatch proof: secrets are not set, so both entries must stop at mirror.sh's config check
-- source: https://github.com/qte77/dummy-push-proof.git
-  gitlab: https://gitlab.com/qte77/dummy-push-proof.git
-- source: https://gitlab.com/qte77/dummy-pull-proof.git
-  github: https://github.com/qte77/dummy-pull-proof.git
+[]
