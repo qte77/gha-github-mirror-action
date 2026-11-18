@@ -17,7 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
       - id: cfg
-        run: echo "matrix=$(yq -o=json config/repos.yaml)" >> "$GITHUB_OUTPUT"
+        # Reason: GITHUB_OUTPUT takes one line per key; plain `-o=json` pretty-prints a non-empty
+        # list over several lines and the step fails with "Invalid format". -I=0 keeps it on one line.
+        run: echo "matrix=$(yq -o=json -I=0 config/repos.yaml)" >> "$GITHUB_OUTPUT"
 
   mirror:
     needs: load
