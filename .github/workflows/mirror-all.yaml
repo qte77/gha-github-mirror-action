@@ -37,7 +37,9 @@ jobs:
         # URL/PAT pairing check. The source is read with the PAT of its host.
         with:
           source_repo: ${{ matrix.repo.source }}
-          source_pat: ${{ contains(matrix.repo.source, 'gitlab.com') && secrets.GITLAB_PAT || contains(matrix.repo.source, 'codeberg.org') && secrets.CODEBERG_PAT || contains(matrix.repo.source, 'github.com') && secrets.GH_TARGET_PAT || '' }}
+          # Reason: match the exact scheme + host prefix, not a substring, so a URL that merely
+          # contains a host name (e.g. https://evil.example/gitlab.com/x.git) never gets that host's PAT.
+          source_pat: ${{ startsWith(matrix.repo.source, 'https://gitlab.com/') && secrets.GITLAB_PAT || startsWith(matrix.repo.source, 'https://codeberg.org/') && secrets.CODEBERG_PAT || startsWith(matrix.repo.source, 'https://github.com/') && secrets.GH_TARGET_PAT || '' }}
           gitlab_url: ${{ matrix.repo.gitlab }}
           gitlab_pat: ${{ matrix.repo.gitlab && secrets.GITLAB_PAT || '' }}
           codeberg_url: ${{ matrix.repo.codeberg }}
