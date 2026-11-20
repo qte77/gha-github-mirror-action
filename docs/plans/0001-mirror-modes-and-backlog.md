@@ -4,24 +4,24 @@ Drafted in plan mode 2026-09-09; HEAD `85aa1a6` at draft time.
 
 ## Status — read this first (handoff)
 
-**As of 2026-11-20.** Tracking issue #41. **Overall:** 11 of 19 rows done (~58 %). Shipped: P0 #40 ·
-A0 #42 · A1 #38/#39 · A2 #44 · A3 #47 · A4 #50 · A5 #63 · A6 #48 · A7 #49 · A8 #46 · A9 #57–#61. Outside the
+**As of 2026-11-20.** Tracking issue #41. **Overall:** 12 of 19 rows done (~63 %). Shipped: P0 #40 ·
+A0 #42 · A1 #38/#39 · A2 #44 · A3 #47 · A4 #50 · A5 #63 · A6 #48 · A7 #49 · A8 #46 · A9 #57–#61 ·
+B4 #64/#65 (v0.2.0). Outside the
 table: #54 (hub `permissions:` block), #55 (actions pinned to commit SHAs, Dependabot groups split).
 P0 history (a test `setup()` overwrote the operator's global git identity) is in PR #40.
 
 **Owner requirement (2026-11-18): pull mode for public and private sources.** The code shipped in
 A4 (PR #50): `source_pat` reads a private source, `github_url`/`github_pat` write a GitHub target
-(README "Modes": Invert / pull, Router); the hub can express it since A5 (#63). It is not usable
-yet: callers on `@v0` and the hub's SHA pin get v0.1.0 until **B4**, and it has never run against a
-real source until **C3**. Decide-by-default: the self-clobber guard stays, so pulling into the repo that runs the
+(README "Modes": Invert / pull, Router); the hub can express it since A5 (#63), and v0.2.0 (B4)
+ships it to `@v0` callers and the hub's pin. It still needs secrets (**B1–B3**) and has never run
+against a real source until **C3**. Decide-by-default: the self-clobber guard stays, so pulling into the repo that runs the
 action remains refused; the owner overrides by adding a row.
 
 **You are the next session. Do this, in order:**
 
-1. **B4** — owner said "go" 2026-11-18; runs right after A5 merges (CHANGELOG `[Unreleased]`
-   already describes A5, so the release must not precede it). Needs no secrets.
-2. **Owner checkpoint** (B1–B3 in one sitting). Do not start C-rows before.
-3. **C1**, then **C2** and **C3**, then **C4** closes the arc.
+1. **Owner checkpoint** (B1–B3 in one sitting). No agent row is open until then; do not start
+   C-rows before.
+2. **C1**, then **C2** and **C3**, then **C4** closes the arc.
 
 Strike each row in the SAME PR that ships it, append the PR number, keep this Status block current.
 
@@ -349,7 +349,7 @@ Strike the row in the PR that ships it; append `— PR #n`.
 | B1 | #7 GitLab account `qte77` + PAT (`write_repository`; add `read_repository` too since this same PAT doubles as the source credential when GitLab is a *source* — see the accepted single-secret-per-host tradeoff in Design decisions) | owner | gitlab.com | PAT value handed to B3 |
 | B2 | #8 Codeberg account `qte77` + PAT (repo write; read too, same reason as B1) | owner | codeberg.org | PAT value handed to B3 |
 | B3 | #9 secrets: `GITLAB_PAT`, `CODEBERG_PAT`, **`GH_TARGET_PAT`** (fine-grained GitHub PAT on the `qte77` account: `contents: read` on every private GitHub repo that is a hub source, `contents: read+write` on every pull target — the hub reads all `https://github.com/` sources with it, see A5) — three secrets total, each doing double duty as source-read + target-write credential for its host | owner (values) → agent (`gh secret set NAME --repo qte77/gha-github-mirror-action`) | GitHub repo settings | `gh secret list` shows all three |
-| B4 | Release 0.1.0 → 0.2.0 so callers on `@v0` get pull mode and the other new inputs. **Since PR #46 (A8), no longer a single dispatch:** (1) `gh workflow run bump-version.yml -f bump_type=minor`, (2) merge the PR it opens onto `main` — since #57 the reusable creates that commit signed (GraphQL `createCommitOnBranch`), as the `main` ruleset requires; the old pin's commit was unsigned and would have been blocked, (3) `tag-release.yml` fires on that push and creates `v0.2.0`, (4) `gh workflow run publish-release.yml` to publish the Release and float `v0`, (5) **PR bumping the hub's SHA pin in `mirror-all.yaml` to the `v0.2.0` commit** — the hub pins a SHA (#55), so step 4 alone does not reach it. Pre-staged by A6's dry-run, but this is the first real dispatch of the new mechanism (A8 was wiring-only) — treat it as a live test, not assumed-safe. | owner-approve → agent | GitHub Actions | tag `v0.2.0` exists, floating `v0` moved, release published, hub pin points at the `v0.2.0` commit |
+| B4 | Release 0.1.0 → 0.2.0 so callers on `@v0` get pull mode and the other new inputs. **Since PR #46 (A8), no longer a single dispatch:** (1) `gh workflow run bump-version.yml -f bump_type=minor`, (2) merge the PR it opens onto `main` — since #57 the reusable creates that commit signed (GraphQL `createCommitOnBranch`), as the `main` ruleset requires; the old pin's commit was unsigned and would have been blocked, (3) `tag-release.yml` fires on that push and creates `v0.2.0`, (4) `gh workflow run publish-release.yml` to publish the Release and float `v0`, (5) **PR bumping the hub's SHA pin in `mirror-all.yaml` to the `v0.2.0` commit** — the hub pins a SHA (#55), so step 4 alone does not reach it. Pre-staged by A6's dry-run, but this is the first real dispatch of the new mechanism (A8 was wiring-only) — treat it as a live test, not assumed-safe. | owner-approve → agent | GitHub Actions | **SHIPPED — #64 (bump), #65 (hub pin), 2026-11-20.** `v0.2.0` annotated tag on `4d39122`, `v0` moved to the same commit, Release published with CHANGELOG `[0.2.0]` notes. Live-run lessons: the bump PR, opened by the workflow token, started no Actions runs — one close + reopen ran full CI; CodeFactor then sat pending until a second close + reopen. The bump commit was signed as expected |
 | C1 | #10 single-repo hub test: one entry in `repos.yaml`, `gh workflow run mirror-all.yaml`, verify refs on GitLab/Codeberg | agent (after B1–B4) | `main` via PR | `git ls-remote` on both targets lists all source refs; run log shows `***`/masked, never a PAT |
 | C2 | #11 full rollout: populate `repos.yaml` from `gh repo list qte77` (public first), dispatch, spot-check 3 repos | agent | PR + dispatch | hub run green for every matrix entry |
 | C3 | Invert (pull) e2e, covering the owner's public + private requirement: two entries with a GitLab/Codeberg *source* — one **public**, one **private** (A5 derives `source_pat` from the host, so both get it; the credential-free clone path is push mode's, covered by `integration.yaml`) — each with a pre-created GitHub `github` target; dispatch; verify both. (The self-clobber negative test already ran in A4/CI against the hub repo itself — no need to repeat it here against a real external source.) | data (external source repo + `GH_TARGET_PAT`) → agent | PR + dispatch | both GitHub targets have their source's refs; the private run's log shows no PAT |
