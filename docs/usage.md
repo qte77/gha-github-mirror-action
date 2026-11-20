@@ -5,7 +5,9 @@ Extended usage beyond the minimal example in the [README](../README.md#how).
 ## Central hub (schedule + dispatch)
 
 The repo includes a `mirror-all.yaml` workflow that reads `config/repos.yaml` and mirrors all
-listed repos via matrix jobs.
+listed repos via matrix jobs. The entry fields, the repo secrets each one uses (`GITLAB_PAT`,
+`CODEBERG_PAT`, `GH_TARGET_PAT`), and push and pull examples are in the header of
+[`config/repos.yaml`](../config/repos.yaml).
 
 ## Local clone (script-only)
 
