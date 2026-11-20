@@ -70,9 +70,6 @@ GitHub target:
           codeberg_pat: ${{ secrets.CODEBERG_PAT }}
 ```
 
-> `source_pat`, `github_url`, and `github_pat` ship in `v0.2.0`; the floating `@v0` tag picks them up
-> once that release is tagged — see the [CHANGELOG](CHANGELOG.md).
-
 **Before using an invert or router target:**
 
 - The GitHub target repo must **pre-exist and be unprotected** — `git push --mirror` force-updates

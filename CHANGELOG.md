@@ -11,6 +11,10 @@ Types of changes:
 
 ## [Unreleased]
 
+### Changed
+
+- Hub `mirror-all.yaml` pins this action at the `v0.2.0` commit (was `v0.1.0`), so hub entries can use the `github` target and the source PAT
+
 ## [0.2.0] - 2026-11-20
 
 ### Security
