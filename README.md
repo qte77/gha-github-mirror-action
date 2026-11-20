@@ -3,7 +3,7 @@
 Mirror GitHub repositories to GitLab and/or Codeberg. All branches, tags, and refs.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue)](CHANGELOG.md)
 [![mirror-all](https://github.com/qte77/gha-github-mirror-action/actions/workflows/mirror-all.yaml/badge.svg)](https://github.com/qte77/gha-github-mirror-action/actions/workflows/mirror-all.yaml)
 [![BATS](https://github.com/qte77/gha-github-mirror-action/actions/workflows/test.yaml/badge.svg)](https://github.com/qte77/gha-github-mirror-action/actions/workflows/test.yaml)
 [![CodeFactor](https://www.codefactor.io/repository/github/qte77/gha-github-mirror-action/badge)](https://www.codefactor.io/repository/github/qte77/gha-github-mirror-action)
