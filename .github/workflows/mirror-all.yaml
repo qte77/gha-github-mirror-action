@@ -17,7 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
       - id: cfg
-        run: echo "matrix=$(yq -o=json config/repos.yaml)" >> "$GITHUB_OUTPUT"
+        # Reason: GITHUB_OUTPUT takes one line per key; plain `-o=json` pretty-prints a non-empty
+        # list over several lines and the step fails with "Invalid format". -I=0 keeps it on one line.
+        run: echo "matrix=$(yq -o=json -I=0 config/repos.yaml)" >> "$GITHUB_OUTPUT"
 
   mirror:
     needs: load
@@ -29,9 +31,17 @@ jobs:
       fail-fast: false
     steps:
       - uses: qte77/gha-github-mirror-action@1e93398fcac45b9b9672fd0cf7cb3be2e2dac075  # v0
+        # Reason: pass each PAT only when its URL is set (mirror.sh rejects a PAT without its URL).
+        # Keep the `''` fallbacks: a non-empty one would hide a missing secret from mirror.sh's
+        # URL/PAT pairing check. The source is read with the PAT of its host.
         with:
           source_repo: ${{ matrix.repo.source }}
+          # Reason: match the exact scheme + host prefix, not a substring, so a URL that merely
+          # contains a host name (e.g. https://evil.example/gitlab.com/x.git) never gets that host's PAT.
+          source_pat: ${{ startsWith(matrix.repo.source, 'https://gitlab.com/') && secrets.GITLAB_PAT || startsWith(matrix.repo.source, 'https://codeberg.org/') && secrets.CODEBERG_PAT || startsWith(matrix.repo.source, 'https://github.com/') && secrets.GH_TARGET_PAT || '' }}
           gitlab_url: ${{ matrix.repo.gitlab }}
-          gitlab_pat: ${{ secrets.GITLAB_PAT }}
+          gitlab_pat: ${{ matrix.repo.gitlab && secrets.GITLAB_PAT || '' }}
           codeberg_url: ${{ matrix.repo.codeberg }}
-          codeberg_pat: ${{ secrets.CODEBERG_PAT }}
+          codeberg_pat: ${{ matrix.repo.codeberg && secrets.CODEBERG_PAT || '' }}
+          github_url: ${{ matrix.repo.github }}
+          github_pat: ${{ matrix.repo.github && secrets.GH_TARGET_PAT || '' }}
